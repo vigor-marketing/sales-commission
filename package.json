@@ -1,0 +1,16 @@
+{
+  "name": "sales-commission",
+  "version": "1.0.0",
+  "private": true,
+  "description": "销售提成计算系统",
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

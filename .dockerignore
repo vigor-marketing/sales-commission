@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+client/node_modules
+screenshots
+docs
+*.py
+*.bak
+*.log
+server/data/*.db-shm
+server/data/*.db-wal
+server/data/*.bak-*
+.git
