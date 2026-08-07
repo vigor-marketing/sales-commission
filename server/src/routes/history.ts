@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getDb } from '../db/database.js';
+import { scheduleBackup } from '../services/backup.js';
 
 export const historyRouter = Router();
 
@@ -174,5 +175,6 @@ historyRouter.delete('/:id', (req, res) => {
     res.status(404).json({ error: '记录不存在' });
     return;
   }
+  scheduleBackup();
   res.status(204).end();
 });
