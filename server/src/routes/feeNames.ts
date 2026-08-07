@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getDb } from '../db/database.js';
+import { scheduleBackup } from '../services/backup.js';
 
 /** 销售费用名称字典管理 */
 export const feeNamesRouter = Router();
@@ -42,6 +43,7 @@ feeNamesRouter.post('/', (req, res) => {
   const maxOrder = (db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM fee_names').get() as { m: number }).m;
   const info = db.prepare('INSERT INTO fee_names (name, sort_order) VALUES (?, ?)').run(name, maxOrder + 1);
   const row = db.prepare('SELECT id, name, sort_order, created_at FROM fee_names WHERE id = ?').get(info.lastInsertRowid) as { id: number; name: string; sort_order: number; created_at: string };
+  scheduleBackup();
   res.json({ data: { id: row.id, name: row.name, sortOrder: row.sort_order, createdAt: row.created_at } });
 });
 
@@ -58,5 +60,6 @@ feeNamesRouter.delete('/:id', (req, res) => {
     res.status(404).json({ error: '费用名称不存在' });
     return;
   }
+  scheduleBackup();
   res.status(204).end();
 });
