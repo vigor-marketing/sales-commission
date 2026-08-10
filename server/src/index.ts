@@ -12,6 +12,7 @@ import { paymentsRouter } from './routes/payments.js';
 import { commissionsRouter } from './routes/commissions.js';
 import { contractsRouter } from './routes/contracts.js';
 import { feeNamesRouter } from './routes/feeNames.js';
+import { platformEventsRouter } from './routes/platformEvents.js';
 import { restoreDbFromCloud, startPeriodicBackup, backupEnvReady } from './services/backup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -49,6 +50,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/commissions', commissionsRouter);
 app.use('/api/contracts', contractsRouter);
 app.use('/api/feeNames', feeNamesRouter);
+app.use('/api/v1', platformEventsRouter);
 
 // 生产模式：托管前端构建产物
 const clientDist = path.join(__dirname, '../../client/dist');
