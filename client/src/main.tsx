@@ -10,12 +10,16 @@ import './styles/global.css';
 // file:// 协议下用 HashRouter（无需服务端路由支持），其他环境用 BrowserRouter
 const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const content = (
   <React.StrictMode>
     <ConfigProvider globalConfig={zhCN}>
-      <Router>
-        <App />
-      </Router>
+      <App />
     </ConfigProvider>
   </React.StrictMode>
+);
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  Router === HashRouter
+    ? <HashRouter>{content}</HashRouter>
+    : <BrowserRouter basename={import.meta.env.BASE_URL}>{content}</BrowserRouter>
 );

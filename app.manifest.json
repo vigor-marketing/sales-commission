@@ -1,0 +1,24 @@
+{
+  "appId": "sales-commission",
+  "name": "销售提成计算系统",
+  "version": "1.1.0",
+  "department": "finance",
+  "entryPath": "/apps/sales-commission/",
+  "healthCheckPath": "/api/health",
+  "embedding": {
+    "mode": "iframe",
+    "frameAncestorsEnv": "FRAME_ANCESTORS",
+    "basePathEnv": "VITE_APP_BASE_PATH"
+  },
+  "authentication": {
+    "current": "bearer-token-gateway",
+    "target": "oidc",
+    "requiredForWorkbench": true
+  },
+  "authorization": {
+    "read": ["finance", "executive"],
+    "write": ["finance-manager", "accountant"],
+    "note": "Transitional API tokens must be exchanged or injected only by the workbench gateway. Replace with OIDC roles and data scopes before production launch."
+  },
+  "dataBoundary": "This module owns commission, contract, payment and finance configuration data. Other modules access it through versioned APIs or events only."
+}

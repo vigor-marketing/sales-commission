@@ -229,6 +229,7 @@ contractsRouter.put('/', (req, res) => {
     totalPlanCount,
     note
   );
+  scheduleBackup();
 
   const row = db.prepare(`SELECT id, contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
               sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, created_at, updated_at

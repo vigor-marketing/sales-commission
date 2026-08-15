@@ -1,10 +1,16 @@
 /** fetch 封装：baseURL=/api（可用 VITE_API_BASE 指向独立后端域名），JSON 序列化，统一错误抛出 */
 
-// 构建期注入：VITE_API_BASE（例如 https://sales-commission-xxx.ap-shanghai.run.tcloudbase.com）；默认同源 /api
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
+// VITE_API_BASE 可指向独立后端；默认跟随 Vite base，支持工作台子路径。
+const configuredApiBase = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '');
+const appBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const API_BASE = configuredApiBase ?? `${appBasePath}/api`;
+
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}/api${path}`, {
+  const res = await fetch(apiUrl(path), {
     headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
     ...options,
   });
