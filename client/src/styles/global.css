@@ -346,6 +346,52 @@ h4 {
   padding-bottom: 9px !important;
 }
 
+/* 表格适配：业务字段不能被截断，宽表在容器内横向滚动查看。 */
+.table-responsive {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.table-responsive .t-table__content {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.table-responsive .t-table__content > table {
+  min-width: max-content;
+}
+
+.table-responsive .t-table__content::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive .t-table__content::-webkit-scrollbar-thumb {
+  background: #b6c2d2;
+  border-radius: var(--r-pill);
+}
+
+.table-responsive .t-table__content::-webkit-scrollbar-track {
+  background: var(--bg-muted);
+}
+
+/* 原生表格使用同一套滚动容器。 */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.table-scroll > table {
+  min-width: max-content;
+}
+
 /* ============================================================ 状态指示器 */
 .status-dot {
   display: inline-flex;

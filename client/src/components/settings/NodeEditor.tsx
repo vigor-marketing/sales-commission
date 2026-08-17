@@ -138,8 +138,8 @@ export default function NodeEditor({ nodes, positionOrder, onChange }: Props) {
       hover
       stripe
       size="medium"
-      className="settings-table"
-      tableLayout="fixed"
+      className="settings-table table-responsive"
+      tableLayout="auto"
     />
   );
 }

@@ -351,6 +351,7 @@ export default function HistoryTable({ version }: Props) {
       </div>
 
       <Table
+        className="table-responsive"
         rowKey="id"
         data={filtered}
         columns={columns}
@@ -359,7 +360,7 @@ export default function HistoryTable({ version }: Props) {
         hover
         stripe
         size="small"
-        tableLayout="fixed"
+        tableLayout="auto"
         selectedRowKeys={selectedRowKeys}
         onSelectChange={(keys) => setSelectedRowKeys(keys)}
         empty={'暂无计算历史，录入收款并保存后自动生成'}

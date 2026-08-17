@@ -121,6 +121,7 @@ export default function ContractDetailPage() {
           )}
         </div>
         <Table
+          className="table-responsive"
           rowKey="id"
           data={records}
           columns={recordColumns}
@@ -128,7 +129,7 @@ export default function ContractDetailPage() {
           hover
           stripe
           size="small"
-          tableLayout="fixed"
+          tableLayout="auto"
           empty={'该合同暂无提成计算记录（请到「提成计算」页录入并保存）'}
         />
       </div>

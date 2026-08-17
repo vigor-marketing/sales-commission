@@ -101,6 +101,7 @@ export default function ResultTable({ result }: Props) {
         </span>
       </div>
       <Table
+        className="table-responsive"
         rowKey="id"
         data={data}
         columns={columns}
@@ -109,7 +110,7 @@ export default function ResultTable({ result }: Props) {
         stripe
         size="medium"
         footData={footerData}
-        tableLayout="fixed"
+        tableLayout="auto"
       />
     </div>
   );

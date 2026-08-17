@@ -258,6 +258,7 @@ export default function ContractsManagePage() {
           </Button>
         </div>
         <Table
+          className="table-responsive"
           rowKey="id"
           data={contracts}
           columns={columns}

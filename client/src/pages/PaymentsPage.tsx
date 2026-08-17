@@ -289,6 +289,7 @@ export default function PaymentsPage() {
           </span>
         </div>
         <Table
+          className="table-responsive"
           rowKey="month"
           data={monthRows}
           columns={monthColumns}
@@ -296,7 +297,7 @@ export default function PaymentsPage() {
           hover
           stripe
           size="small"
-          tableLayout="fixed"
+          tableLayout="auto"
           empty={loading ? '加载中…' : '当前筛选无数据'}
         />
       </div>
@@ -314,6 +315,7 @@ export default function PaymentsPage() {
           </span>
         </div>
         <Table
+          className="table-responsive"
           rowKey="id"
           data={filtered}
           columns={detailColumns}
@@ -321,7 +323,7 @@ export default function PaymentsPage() {
           hover
           stripe
           size="small"
-          tableLayout="fixed"
+          tableLayout="auto"
           empty={loading ? '加载中…' : '当前筛选无提成记录'}
         />
       </div>

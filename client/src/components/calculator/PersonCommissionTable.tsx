@@ -132,68 +132,70 @@ export default function PersonCommissionTable({ records }: Props) {
                   个人总计 ¥ {fmtMoney(totalsByPerson.get(person) ?? 0)}
                 </span>
               </div>
-              <table
-                style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  fontSize: 13,
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th style={thStyle}>第几笔</th>
-                    <th style={thStyle}>岗位</th>
-                    <th style={thStyle}>提成金额（¥）</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {planIndexes.flatMap((idx) =>
-                    positions.map((pos) => {
-                      const amt = cellAmount(person, idx, pos);
-                      if (amt === 0) return null;
-                      return (
-                        <tr key={`${idx}-${pos}`}>
-                          <td style={{ ...tdStyle, textAlign: 'center' }}>第{idx}笔</td>
-                          <td style={tdStyle}>{pos}</td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              textAlign: 'right',
-                              fontWeight: 600,
-                              color: '#4a5568',
-                            }}
-                          >
-                            {fmtMoney(amt)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                  <tr style={{ background: '#f7f9ff' }}>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: 'center',
-                        fontWeight: 700,
-                      }}
-                    >
-                      合计
-                    </td>
-                    <td style={tdStyle}></td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        textAlign: 'right',
-                        fontWeight: 800,
-                        color: '#0052d9',
-                      }}
-                    >
-                      ¥ {fmtMoney(totalsByPerson.get(person) ?? 0)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: 13,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>第几笔</th>
+                      <th style={thStyle}>岗位</th>
+                      <th style={thStyle}>提成金额（¥）</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {planIndexes.flatMap((idx) =>
+                      positions.map((pos) => {
+                        const amt = cellAmount(person, idx, pos);
+                        if (amt === 0) return null;
+                        return (
+                          <tr key={`${idx}-${pos}`}>
+                            <td style={{ ...tdStyle, textAlign: 'center' }}>第{idx}笔</td>
+                            <td style={tdStyle}>{pos}</td>
+                            <td
+                              style={{
+                                ...tdStyle,
+                                textAlign: 'right',
+                                fontWeight: 600,
+                                color: '#4a5568',
+                              }}
+                            >
+                              {fmtMoney(amt)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                    <tr style={{ background: '#f7f9ff' }}>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign: 'center',
+                          fontWeight: 700,
+                        }}
+                      >
+                        合计
+                      </td>
+                      <td style={tdStyle}></td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          textAlign: 'right',
+                          fontWeight: 800,
+                          color: '#0052d9',
+                        }}
+                      >
+                        ¥ {fmtMoney(totalsByPerson.get(person) ?? 0)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           );
         })}

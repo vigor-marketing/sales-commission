@@ -159,6 +159,7 @@ export default function ContractStatisticsPage() {
           <span>多笔提成明细（{records.length} 笔）</span>
         </div>
         <Table
+          className="table-responsive"
           rowKey="id"
           data={records}
           columns={recordColumns}
@@ -166,7 +167,7 @@ export default function ContractStatisticsPage() {
           hover
           stripe
           size="small"
-          tableLayout="fixed"
+          tableLayout="auto"
           empty={'该合同暂无提成计算记录'}
         />
       </div>
