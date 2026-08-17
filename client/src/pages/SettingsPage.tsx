@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Input, Select, MessagePlugin } from 'tdesign-react';
 import type { Settings, Template, FlowNode } from '../types';
 import { getSettings, saveSettings } from '../api/settings';
@@ -16,9 +17,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newPosition, setNewPosition] = useState('');
-  const [newTemplateName, setNewTemplateName] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState('');
   const [dirty, setDirty] = useState(false);
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,31 +78,6 @@ export default function SettingsPage() {
   const selectTemplate = (id: string) => {
     setActiveTemplateId(id);
     setNewPosition('');
-  };
-
-  const addTemplate = () => {
-    const name = newTemplateName.trim();
-    if (!name) {
-      MessagePlugin.warning('请输入表格类型名称');
-      return;
-    }
-    const base = settings.templates[0] ?? defaultSettings().templates[0];
-    const newTemplate: Template = {
-      id: `tpl-${Date.now()}`,
-      name,
-      totalRate: base.totalRate,
-      nodes: base.nodes.map((n) => ({ ...n, positions: { ...n.positions } })),
-      positionOrder: [...base.positionOrder],
-      defaultRates: { ...base.defaultRates },
-    };
-    const next = { ...settings, templates: [...settings.templates, newTemplate] };
-    update(next);
-    setActiveTemplateId(newTemplate.id);
-    setNewTemplateName('');
-    // 立即持久化：克隆现有配置并自动保存，无需再点「保存设置」或重填
-    saveSettings(next)
-      .then(() => MessagePlugin.success(`已添加表格类型「${name}」`))
-      .catch((e) => MessagePlugin.error(e instanceof Error ? e.message : '新增失败，请重试'));
   };
 
   const removeTemplate = (id: string) => {
@@ -189,14 +165,7 @@ export default function SettingsPage() {
         <div className="section-title">
           <span>表格类型与流程节点分配</span>
           <div className="toolbar">
-            <Input
-              value={newTemplateName}
-              onChange={(v) => setNewTemplateName(String(v))}
-              placeholder="输入新表格类型名称"
-              style={{ width: 200 }}
-              onEnter={addTemplate}
-            />
-            <Button variant="outline" onClick={addTemplate}>
+            <Button variant="outline" onClick={() => navigate('/settings/templates/new')}>
               添加表格类型
             </Button>
             <Button variant="outline" theme="warning" onClick={resetDefault}>

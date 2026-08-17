@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 import HistoryPage from './pages/HistoryPage';
 import ContractDetailPage from './pages/ContractDetailPage';
 import ContractStatisticsPage from './pages/ContractStatisticsPage';
+import TemplateEditorPage from './pages/TemplateEditorPage';
 import { useEmbedResize } from './utils/embedResize';
 
 const { Aside, Content } = Layout;
@@ -144,6 +145,7 @@ export default function App() {
               <Route path="/contract-statistics/:contractNo" element={<ContractStatisticsPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/templates/new" element={<TemplateEditorPage />} />
             </Routes>
           </div>
         </Content>
