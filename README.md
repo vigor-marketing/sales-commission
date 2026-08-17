@@ -74,6 +74,14 @@ sales-commission/
 | GET | `/api/history?page=&pageSize=` | 历史分页 |
 | DELETE | `/api/history/:id` | 删除历史 |
 | GET | `/api/health` | 健康检查 |
+| POST | `/api/v1/events` | 工作台受控推送 `contract.signed.v1`、`payment.confirmed.v1`；仅写入同步快照，不改写财务核算数据 |
+| GET | `/api/v1/snapshots` | 读取已接收的合同/回款同步快照，用于工作台联调与审计 |
+
+## 工作台事件接入
+
+提成系统是财务核算数据的唯一维护方。工作台只能向 `POST /api/v1/events` 推送销售合同签订和回款确认事件，系统会按 `eventId` 幂等保存到独立同步快照；不会自动创建或覆盖提成合同、费率、岗位人员、收款计划或计算历史。
+
+部署时必须设置 `WORKBENCH_API_TOKEN`，工作台调用须携带 `X-Workbench-Token`。未配置令牌时接口会拒绝所有事件，避免财务数据入口暴露。
 
 ## 默认数据
 
