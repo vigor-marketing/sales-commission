@@ -6,3 +6,6 @@ server/data/*.db-*
 .env
 .env.*
 !.env.example
+
+# macOS AppleDouble 元数据
+._*
