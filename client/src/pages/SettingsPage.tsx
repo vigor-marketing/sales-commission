@@ -94,10 +94,14 @@ export default function SettingsPage() {
       positionOrder: [...base.positionOrder],
       defaultRates: { ...base.defaultRates },
     };
-    update({ ...settings, templates: [...settings.templates, newTemplate] });
+    const next = { ...settings, templates: [...settings.templates, newTemplate] };
+    update(next);
     setActiveTemplateId(newTemplate.id);
     setNewTemplateName('');
-    MessagePlugin.success(`已添加表格类型「${name}」`);
+    // 立即持久化：克隆现有配置并自动保存，无需再点「保存设置」或重填
+    saveSettings(next)
+      .then(() => MessagePlugin.success(`已添加表格类型「${name}」`))
+      .catch((e) => MessagePlugin.error(e instanceof Error ? e.message : '新增失败，请重试'));
   };
 
   const removeTemplate = (id: string) => {
@@ -105,11 +109,14 @@ export default function SettingsPage() {
       MessagePlugin.warning('至少保留一个表格类型');
       return;
     }
-    update({ ...settings, templates: settings.templates.filter((t) => t.id !== id) });
+    const next = { ...settings, templates: settings.templates.filter((t) => t.id !== id) };
+    update(next);
     if (activeTemplateId === id) {
-      setActiveTemplateId(settings.templates[0].id);
+      setActiveTemplateId(next.templates[0].id);
     }
-    MessagePlugin.info('已删除该表格类型');
+    saveSettings(next)
+      .then(() => MessagePlugin.info('已删除该表格类型'))
+      .catch((e) => MessagePlugin.error(e instanceof Error ? e.message : '删除失败，请重试'));
   };
 
   const addNode = () => {
