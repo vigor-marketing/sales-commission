@@ -3,6 +3,7 @@ import { Select, Tag, MessagePlugin } from 'tdesign-react';
 import type { Settings } from '../../types';
 import { getCommissionPersons } from '../../api/commissions';
 import { getContracts } from '../../api/contracts';
+import { saveSettings } from '../../api/settings';
 
 interface Props {
   settings: Settings;
@@ -41,7 +42,12 @@ export default function PersonPositionsEditor({ settings, onChange }: Props) {
     const next: Record<string, string[]> = { ...personPositions };
     if (list.length > 0) next[person] = list;
     else delete next[person];
-    onChange({ ...settings, personPositions: next });
+    const nextSettings = { ...settings, personPositions: next };
+    onChange(nextSettings);
+    // 立即持久化，避免依赖「保存设置」导致刷新后回退
+    saveSettings(nextSettings).catch((e) =>
+      MessagePlugin.error(e instanceof Error ? e.message : '保存失败，请重试')
+    );
   };
 
   const assignedCount = Object.values(personPositions).filter((v) => v && v.length > 0).length;

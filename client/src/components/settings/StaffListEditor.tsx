@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Input, Button, Tag, MessagePlugin, Empty } from 'tdesign-react';
 import type { Settings } from '../../types';
+import { saveSettings } from '../../api/settings';
 
 interface Props {
   settings: Settings;
@@ -10,7 +11,22 @@ interface Props {
 /** 人员名单管理：添加 / 删除人员，供计算页姓名下拉选择 */
 export default function StaffListEditor({ settings, onChange }: Props) {
   const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
   const staffList = settings.staffList ?? [];
+
+  /** 更新本地状态并立即持久化（人员增删无需再点「保存设置」） */
+  const applyAndSave = async (next: Settings, okMsg: string) => {
+    onChange(next);
+    setSaving(true);
+    try {
+      await saveSettings(next);
+      MessagePlugin.success(okMsg);
+    } catch (e) {
+      MessagePlugin.error(e instanceof Error ? e.message : '保存失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const addStaff = () => {
     const n = name.trim();
@@ -22,14 +38,15 @@ export default function StaffListEditor({ settings, onChange }: Props) {
       MessagePlugin.warning(`「${n}」已在名单中`);
       return;
     }
-    onChange({ ...settings, staffList: [...staffList, n] });
     setName('');
-    MessagePlugin.success(`已添加「${n}」`);
+    void applyAndSave({ ...settings, staffList: [...staffList, n] }, `已添加「${n}」`);
   };
 
   const removeStaff = (n: string) => {
-    onChange({ ...settings, staffList: staffList.filter((s) => s !== n) });
-    MessagePlugin.info(`已移除「${n}」`);
+    void applyAndSave(
+      { ...settings, staffList: staffList.filter((s) => s !== n) },
+      `已移除「${n}」`
+    );
   };
 
   return (
@@ -44,7 +61,7 @@ export default function StaffListEditor({ settings, onChange }: Props) {
           onEnter={addStaff}
           clearable
         />
-        <Button theme="primary" onClick={addStaff}>
+        <Button theme="primary" onClick={addStaff} loading={saving}>
           添加人员
         </Button>
         <span style={{ fontSize: 12, color: '#9aa3b5', alignSelf: 'center' }}>
