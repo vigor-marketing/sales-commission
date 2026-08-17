@@ -5,8 +5,11 @@
 
 import type { CalculationResult, CalculateInput, Settings, Template, FlowNode } from '../types';
 
+/** 金额四舍五入到分（EPSILON 方向修正，避免 1.005×100=100.4999… 边界不进位）。
+ *  必须与后端 services/calculator.ts 的 round2 保持一致，否则兜底计算会与后端金额分叉。 */
 export function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+  const dir = n >= 0 ? Number.EPSILON : -Number.EPSILON;
+  return Math.round((n + dir) * 100) / 100;
 }
 
 const DEFAULT_POSITION_ORDER = [
@@ -84,7 +87,12 @@ export function validateTemplate(t: Template): string[] {
       warnings.push(`模板「${t.name}」节点「${node.name}」比例 ${fmtPct(node.nodeRatio)} 超出合理范围 0%~100%`);
     }
     let posSum = 0;
-    for (const ratio of Object.values(node.positions)) posSum += ratio;
+    for (const [pos, ratio] of Object.entries(node.positions)) {
+      if (ratio < 0 || ratio > 1) {
+        warnings.push(`模板「${t.name}」节点「${node.name}」岗位「${pos}」比例 ${fmtPct(ratio)} 超出合理范围 0%~100%`);
+      }
+      posSum += ratio;
+    }
     if (Math.abs(posSum - node.nodeRatio) > 1e-9) {
       warnings.push(
         `模板「${t.name}」节点「${node.name}」内岗位比例之和 ${fmtPct(posSum)} ≠ 节点比例 ${fmtPct(node.nodeRatio)}`
