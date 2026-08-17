@@ -4,12 +4,8 @@ import type { FeeName } from '../types';
 
 export async function getFeeNames(): Promise<FeeName[]> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: FeeName[] }>('/feeNames');
-      return res.data;
-    } catch {
-      // 后端异常回退默认
-    }
+    const res = await http.get<{ data: FeeName[] }>('/feeNames');
+    return res.data;
   }
   // 兜底默认（与后端 ensureDefaultFeeNames 一致）
   return [

@@ -6,12 +6,10 @@ import { loadLocalSettings, addLocalHistory } from '../utils/localStore';
 
 export async function runCalculation(req: CalculateRequest): Promise<CalculationResult> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.post<{ data: CalculationResult }>('/calculate', req);
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
-    }
+    // 后端可用时直接请求；失败（如 409/422 拒绝、网络异常）直接抛出交由页面展示，
+    // 不再静默回退本地计算——否则后端已拒绝但前端仍显示「保存成功」，产生双份数据源。
+    const res = await http.post<{ data: CalculationResult }>('/calculate', req);
+    return res.data;
   }
   // 前端兜底：用本地配置（按 templateId 选模板）计算并写入本地历史
   const settings = loadLocalSettings() ?? defaultSettings();

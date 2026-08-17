@@ -39,17 +39,14 @@ export async function getCommissions(filter: {
   year?: string;
   month?: string;
   customerName?: string;
-} = {}): Promise<CommissionsData> {  if (await isBackendAvailable()) {
-    try {
-      const qs = new URLSearchParams();
-      if (filter.year) qs.set('year', filter.year);
-      if (filter.month) qs.set('month', filter.month);
-      if (filter.customerName) qs.set('customerName', filter.customerName);
-      const res = await http.get<{ data: CommissionsData }>(`/commissions?${qs.toString()}`);
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
-    }
+} = {}): Promise<CommissionsData> {
+  if (await isBackendAvailable()) {
+    const qs = new URLSearchParams();
+    if (filter.year) qs.set('year', filter.year);
+    if (filter.month) qs.set('month', filter.month);
+    if (filter.customerName) qs.set('customerName', filter.customerName);
+    const res = await http.get<{ data: CommissionsData }>(`/commissions?${qs.toString()}`);
+    return res.data;
   }
   // 本地兜底
   const now = new Date();
@@ -113,12 +110,8 @@ export async function getCommissions(filter: {
  */
 export async function getCommissionPersons(): Promise<string[]> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: string[] }>('/commissions/persons');
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
-    }
+    const res = await http.get<{ data: string[] }>('/commissions/persons');
+    return res.data;
   }
   // 本地兜底：localStorage 历史中出现的人员
   const persons = new Set<string>();

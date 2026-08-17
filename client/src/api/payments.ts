@@ -15,22 +15,18 @@ export interface PaymentFilter {
 
 export async function getPayments(filter: PaymentFilter = {}): Promise<PaymentsPageData> {
   if (await isBackendAvailable()) {
-    try {
-      const qs = new URLSearchParams();
-      if (filter.month) qs.set('month', filter.month);
-      if (filter.contractNo) qs.set('contractNo', filter.contractNo);
-      if (filter.contractNos && filter.contractNos.length > 0) {
-        qs.set('contractNos', filter.contractNos.join(','));
-      }
-      if (filter.customerName) qs.set('customerName', filter.customerName);
-      if (filter.status && filter.status !== 'all') qs.set('status', filter.status);
-      if (filter.page) qs.set('page', String(filter.page));
-      if (filter.pageSize) qs.set('pageSize', String(filter.pageSize));
-      const res = await http.get<{ data: PaymentsPageData }>(`/payments?${qs.toString()}`);
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
+    const qs = new URLSearchParams();
+    if (filter.month) qs.set('month', filter.month);
+    if (filter.contractNo) qs.set('contractNo', filter.contractNo);
+    if (filter.contractNos && filter.contractNos.length > 0) {
+      qs.set('contractNos', filter.contractNos.join(','));
     }
+    if (filter.customerName) qs.set('customerName', filter.customerName);
+    if (filter.status && filter.status !== 'all') qs.set('status', filter.status);
+    if (filter.page) qs.set('page', String(filter.page));
+    if (filter.pageSize) qs.set('pageSize', String(filter.pageSize));
+    const res = await http.get<{ data: PaymentsPageData }>(`/payments?${qs.toString()}`);
+    return res.data;
   }
   // 本地兜底：从 localStorage 历史展开收款计划
   const now = new Date();
@@ -98,12 +94,8 @@ export async function getPayments(filter: PaymentFilter = {}): Promise<PaymentsP
 /** 返回有收款记录的所有月份 */
 export async function getPaymentMonths(): Promise<string[]> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: string[] }>('/payments/months');
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
-    }
+    const res = await http.get<{ data: string[] }>('/payments/months');
+    return res.data;
   }
   const now = new Date();
   const current = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -124,12 +116,8 @@ export interface YearlyData {
 /** 获取年度各月收款汇总 */
 export async function getYearly(year: number): Promise<YearlyData> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: YearlyData }>(`/payments/yearly?year=${year}`);
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
-    }
+    const res = await http.get<{ data: YearlyData }>(`/payments/yearly?year=${year}`);
+    return res.data;
   }
   // 本地兜底
   const byMonth: Record<string, { month: string; amountCNY: number; count: number }> = {};
@@ -155,12 +143,8 @@ export async function getYearly(year: number): Promise<YearlyData> {
 /** 返回所有出现过的合同号 */
 export async function getContractOptions(): Promise<string[]> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: string[] }>('/payments/contracts');
-      return res.data;
-    } catch {
-      // 后端异常时回退本地
-    }
+    const res = await http.get<{ data: string[] }>('/payments/contracts');
+    return res.data;
   }
   const set = new Set<string>();
   for (const r of loadLocalHistory()) {

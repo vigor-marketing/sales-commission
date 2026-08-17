@@ -5,26 +5,18 @@ import type { Contract } from '../types';
 
 export async function getContracts(): Promise<Contract[]> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: Contract[] }>('/contracts');
-      return res.data;
-    } catch {
-      // 后端异常回退本地
-    }
+    const res = await http.get<{ data: Contract[] }>('/contracts');
+    return res.data;
   }
   return loadLocalContracts();
 }
 
 export async function getContract(contractNo: string): Promise<Contract | null> {
   if (await isBackendAvailable()) {
-    try {
-      const res = await http.get<{ data: Contract | null }>(
-        `/contracts/${encodeURIComponent(contractNo)}`
-      );
-      return res.data;
-    } catch {
-      // 后端异常回退本地
-    }
+    const res = await http.get<{ data: Contract | null }>(
+      `/contracts/${encodeURIComponent(contractNo)}`
+    );
+    return res.data;
   }
   const list = loadLocalContracts();
   return list.find((c) => c.contractNo === contractNo) ?? null;
