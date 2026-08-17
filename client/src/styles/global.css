@@ -89,8 +89,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* 防页面横向滚动条（容器溢出导致） */
-  overflow-x: hidden;
+  /* 横向溢出由具体表格容器处理，不能在页面层面裁切内容。 */
+  overflow-x: visible;
 }
 
 /* TDesign 布局：禁用侧栏横滚 + 菜单文字不换行（左右滑动问题） */
@@ -346,52 +346,6 @@ h4 {
   padding-bottom: 9px !important;
 }
 
-/* 表格适配：业务字段不能被截断，宽表在容器内横向滚动查看。 */
-.table-responsive {
-  max-width: 100%;
-  min-width: 0;
-}
-
-.table-responsive .t-table__content {
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
-}
-
-.table-responsive .t-table__content > table {
-  min-width: max-content;
-}
-
-.table-responsive .t-table__content::-webkit-scrollbar {
-  height: 8px;
-}
-
-.table-responsive .t-table__content::-webkit-scrollbar-thumb {
-  background: #b6c2d2;
-  border-radius: var(--r-pill);
-}
-
-.table-responsive .t-table__content::-webkit-scrollbar-track {
-  background: var(--bg-muted);
-}
-
-/* 原生表格使用同一套滚动容器。 */
-.table-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
-}
-
-.table-scroll > table {
-  min-width: max-content;
-}
-
 /* ============================================================ 状态指示器 */
 .status-dot {
   display: inline-flex;
@@ -611,4 +565,68 @@ h4 {
 /* 状态点 pill */
 .status-dot .dot {
   border-radius: 50%;
+}
+
+/* ============================================================ 嵌入与表单响应式 */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll > .t-table,
+.table-scroll > table {
+  min-width: max-content;
+}
+
+.contract-list-table {
+  min-width: 920px;
+}
+
+@media (max-width: 900px) {
+  .app-shell { display: block; }
+  .app-sider.t-layout__sider {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0;
+    position: static !important;
+    overflow: visible !important;
+  }
+  .app-brand { padding: 12px 16px !important; }
+  .app-menu.t-default-menu {
+    display: flex;
+    width: 100%;
+    overflow-x: auto !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-menu .t-menu__item,
+  .app-menu .t-menu-item { flex: 0 0 auto; }
+  .app-content { padding: var(--sp-4) !important; }
+  .section-card .t-input,
+  .section-card .t-input-number,
+  .section-card .t-select,
+  .section-card .t-date-picker { max-width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .section-card > div[style*="display: flex"],
+  .filter-bar > div { align-items: stretch !important; }
+  .section-card .t-input,
+  .section-card .t-input-number,
+  .section-card .t-select,
+  .section-card .t-date-picker { width: 100% !important; }
+  .section-card .t-button { max-width: 100%; }
+}
+
+@media (max-width: 440px) {
+  .app-brand-subtitle { display: none; }
+  .app-content { padding: var(--sp-3) !important; }
+  .page-container,
+  .section-card { padding: var(--sp-3) !important; }
+  .app-menu .t-menu__item,
+  .app-menu .t-menu-item {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }

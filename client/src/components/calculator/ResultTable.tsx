@@ -100,8 +100,7 @@ export default function ResultTable({ result }: Props) {
           数值单位：元（¥）
         </span>
       </div>
-      <Table
-        className="table-responsive"
+      <div className="table-scroll"><Table
         rowKey="id"
         data={data}
         columns={columns}
@@ -110,8 +109,8 @@ export default function ResultTable({ result }: Props) {
         stripe
         size="medium"
         footData={footerData}
-        tableLayout="auto"
-      />
+        tableLayout="fixed"
+      /></div>
     </div>
   );
 }

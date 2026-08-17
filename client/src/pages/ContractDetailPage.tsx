@@ -120,8 +120,7 @@ export default function ContractDetailPage() {
             </span>
           )}
         </div>
-        <Table
-          className="table-responsive"
+        <div className="table-scroll"><Table
           rowKey="id"
           data={records}
           columns={recordColumns}
@@ -129,9 +128,9 @@ export default function ContractDetailPage() {
           hover
           stripe
           size="small"
-          tableLayout="auto"
+          tableLayout="fixed"
           empty={'该合同暂无提成计算记录（请到「提成计算」页录入并保存）'}
-        />
+        /></div>
       </div>
 
       {/* 按人汇总（每位成员 × 每笔 × 岗位展开） */}

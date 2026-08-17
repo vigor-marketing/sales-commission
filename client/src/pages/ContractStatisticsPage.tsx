@@ -158,8 +158,7 @@ export default function ContractStatisticsPage() {
         <div className="section-title">
           <span>多笔提成明细（{records.length} 笔）</span>
         </div>
-        <Table
-          className="table-responsive"
+        <div className="table-scroll"><Table
           rowKey="id"
           data={records}
           columns={recordColumns}
@@ -167,9 +166,9 @@ export default function ContractStatisticsPage() {
           hover
           stripe
           size="small"
-          tableLayout="auto"
+          tableLayout="fixed"
           empty={'该合同暂无提成计算记录'}
-        />
+        /></div>
       </div>
 
       {/* 按人提成明细（每位成员 × 每笔 × 岗位，确保每人都展开到岗位级） */}

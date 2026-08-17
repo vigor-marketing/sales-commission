@@ -7,15 +7,18 @@ import App from './App';
 import 'tdesign-react/es/style/index.css';
 import './styles/global.css';
 
-// file:// 协议下用 HashRouter（无需服务端路由支持），其他环境用 BrowserRouter
-const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
-
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ConfigProvider globalConfig={zhCN}>
-      <Router>
-        <App />
-      </Router>
+      {window.location.protocol === 'file:' ? (
+        <HashRouter>
+          <App />
+        </HashRouter>
+      ) : (
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <App />
+        </BrowserRouter>
+      )}
     </ConfigProvider>
   </React.StrictMode>
 );

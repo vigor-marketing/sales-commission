@@ -288,8 +288,7 @@ export default function PaymentsPage() {
             {filtered.length === 0 ? '当前筛选无数据' : `共 ${monthRows.length} 个月 ${filtered.length} 笔提成`}
           </span>
         </div>
-        <Table
-          className="table-responsive"
+        <div className="table-scroll"><Table
           rowKey="month"
           data={monthRows}
           columns={monthColumns}
@@ -297,9 +296,9 @@ export default function PaymentsPage() {
           hover
           stripe
           size="small"
-          tableLayout="auto"
+          tableLayout="fixed"
           empty={loading ? '加载中…' : '当前筛选无数据'}
-        />
+        /></div>
       </div>
 
       {/* 提成明细（按合同 × 笔 × 岗位 × 人）—— 单人筛选只显示该人 */}
@@ -314,8 +313,7 @@ export default function PaymentsPage() {
             单人筛选只显示该人员提成，不混入其他人
           </span>
         </div>
-        <Table
-          className="table-responsive"
+        <div className="table-scroll"><Table
           rowKey="id"
           data={filtered}
           columns={detailColumns}
@@ -323,9 +321,9 @@ export default function PaymentsPage() {
           hover
           stripe
           size="small"
-          tableLayout="auto"
+          tableLayout="fixed"
           empty={loading ? '加载中…' : '当前筛选无提成记录'}
-        />
+        /></div>
       </div>
     </div>
   );

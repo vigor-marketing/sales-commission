@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Layout, Menu } from 'tdesign-react';
+import { CalculatorIcon, ChartBarIcon, EditIcon, FileIcon, SettingIcon } from 'tdesign-icons-react';
 import ContractsPage from './pages/ContractsPage';
 import ContractsManagePage from './pages/ContractsManagePage';
 import CalculatorPage from './pages/CalculatorPage';
@@ -9,8 +10,10 @@ import SettingsPage from './pages/SettingsPage';
 import HistoryPage from './pages/HistoryPage';
 import ContractDetailPage from './pages/ContractDetailPage';
 import ContractStatisticsPage from './pages/ContractStatisticsPage';
+import { useEmbedResize } from './utils/embedResize';
 
 const { Aside, Content } = Layout;
+const isEmptyPilot = import.meta.env.VITE_EMPTY_DATA_MODE === 'true';
 
 /** 菜单值 → 路由路径 */
 function menuToPath(v: string): string {
@@ -23,6 +26,7 @@ function menuToPath(v: string): string {
 }
 
 export default function App() {
+  useEmbedResize();
   const location = useLocation();
   const navigate = useNavigate();
   const [active, setActive] = useState<string>(() => {
@@ -49,9 +53,10 @@ export default function App() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="app-shell" style={{ minHeight: '100vh' }}>
       {/* 左侧功能选择（品牌 + 菜单） */}
       <Aside
+        className="app-sider"
         width="208px"
         style={{
           background: '#fff',
@@ -64,7 +69,7 @@ export default function App() {
         }}
       >
         {/* 品牌区 */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '18px 16px 14px', borderBottom: '1px solid #eef0f5' }}>
+        <div className="app-brand" style={{ display: 'flex', alignItems: 'center', padding: '18px 16px 14px', borderBottom: '1px solid #eef0f5' }}>
           <div
             style={{
               width: 36,
@@ -93,23 +98,41 @@ export default function App() {
 
         {/* 功能菜单 */}
         <Menu
+          className="app-menu"
           theme="light"
           value={active}
           onChange={handleMenuChange}
           style={{ borderRight: 'none' }}
         >
-          <Menu.MenuItem value="/contracts">合同录入</Menu.MenuItem>
-          <Menu.MenuItem value="/contracts-manage">合同管理</Menu.MenuItem>
-          <Menu.MenuItem value="/calculate">提成计算</Menu.MenuItem>
-          <Menu.MenuItem value="/payments">提成统计表</Menu.MenuItem>
-          <Menu.MenuItem value="/settings">系统设置</Menu.MenuItem>
+          <Menu.MenuItem value="/contracts" icon={<EditIcon />}>合同录入</Menu.MenuItem>
+          <Menu.MenuItem value="/contracts-manage" icon={<FileIcon />}>合同管理</Menu.MenuItem>
+          <Menu.MenuItem value="/calculate" icon={<CalculatorIcon />}>提成计算</Menu.MenuItem>
+          <Menu.MenuItem value="/payments" icon={<ChartBarIcon />}>提成统计表</Menu.MenuItem>
+          <Menu.MenuItem value="/settings" icon={<SettingIcon />}>系统设置</Menu.MenuItem>
         </Menu>
       </Aside>
 
       {/* 右侧内容 */}
       <Layout>
-        <Content style={{ background: '#f4f6fb', padding: 24, minHeight: '100vh' }}>
+        <Content className="app-content" style={{ background: '#f4f6fb', padding: 24, minHeight: '100vh' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+            {isEmptyPilot && (
+              <div
+                role="status"
+                style={{
+                  marginBottom: 16,
+                  padding: '10px 14px',
+                  border: '1px solid #e37318',
+                  borderRadius: 8,
+                  background: '#fff4e8',
+                  color: '#7a3b00',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                当前为 CVM 空白迁移实例：历史财务数据尚待恢复，请勿将本页数据视为原系统记录。
+              </div>
+            )}
             <Routes>
               {/* 默认进入合同录入页 */}
               <Route path="/" element={<Navigate to="/contracts" replace />} />
