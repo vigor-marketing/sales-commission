@@ -350,7 +350,8 @@ export default function HistoryTable({ version }: Props) {
         )}
       </div>
 
-      <div className="table-scroll"><Table
+      <Table
+        className="table-responsive"
         rowKey="id"
         data={filtered}
         columns={columns}
@@ -359,11 +360,11 @@ export default function HistoryTable({ version }: Props) {
         hover
         stripe
         size="small"
-        tableLayout="fixed"
+        tableLayout="auto"
         selectedRowKeys={selectedRowKeys}
         onSelectChange={(keys) => setSelectedRowKeys(keys)}
         empty={'暂无计算历史，录入收款并保存后自动生成'}
-      /></div>
+      />
       <div style={{ marginTop: 12, fontSize: 12, color: '#9aa3b5' }}>
         提示：多选模式可勾选多条批量导出/删除；单选模式点击行选中一条。
       </div>

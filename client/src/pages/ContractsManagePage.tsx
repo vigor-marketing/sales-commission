@@ -257,7 +257,8 @@ export default function ContractsManagePage() {
             {selectedRowKeys.length > 0 ? `导出所选合同明细（${selectedRowKeys.length}）` : '导出全部合同明细'}
           </Button>
         </div>
-        <div className="table-scroll"><Table className="contract-list-table"
+        <Table
+          className="table-responsive"
           rowKey="id"
           data={contracts}
           columns={columns}
@@ -266,10 +267,11 @@ export default function ContractsManagePage() {
           hover
           stripe
           size="small"
+          tableLayout="auto"
           empty={'暂无合同，请先到「合同录入」页创建'}
           selectedRowKeys={selectedRowKeys}
           onSelectChange={(keys) => setSelectedRowKeys(keys as Array<string | number>)}
-        /></div>
+        />
       </div>
 
       {/* 修改合同 */}

@@ -130,7 +130,7 @@ export default function NodeEditor({ nodes, positionOrder, onChange }: Props) {
   ];
 
   return (
-    <div className="table-scroll"><Table
+    <Table
       rowKey="id"
       data={data}
       columns={columns}
@@ -138,8 +138,8 @@ export default function NodeEditor({ nodes, positionOrder, onChange }: Props) {
       hover
       stripe
       size="medium"
-      className="settings-table"
-      tableLayout="fixed"
-    /></div>
+      className="settings-table table-responsive"
+      tableLayout="auto"
+    />
   );
 }
