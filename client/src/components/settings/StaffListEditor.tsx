@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Input, Button, Tag, MessagePlugin, Empty } from 'tdesign-react';
 import type { Settings } from '../../types';
 import { saveSettings } from '../../api/settings';
+import WorkbenchPersonPicker from './WorkbenchPersonPicker';
 
 interface Props {
   settings: Settings;
@@ -12,6 +13,7 @@ interface Props {
 export default function StaffListEditor({ settings, onChange }: Props) {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const staffList = settings.staffList ?? [];
 
   /** 更新本地状态并立即持久化（人员增删无需再点「保存设置」） */
@@ -56,6 +58,17 @@ export default function StaffListEditor({ settings, onChange }: Props) {
     );
   };
 
+  /** 从工作台选择器批量添加（去重后一次性持久化） */
+  const addFromWorkbench = (names: string[]) => {
+    const fresh = names.filter((n) => !staffList.includes(n));
+    if (fresh.length === 0) return;
+    void applyAndSave(
+      { ...settings, staffList: [...staffList, ...fresh] },
+      `已添加 ${fresh.length} 人`
+    );
+    setPickerVisible(false);
+  };
+
   return (
     <div className="section-card">
       <div className="section-title">人员名单</div>
@@ -70,6 +83,9 @@ export default function StaffListEditor({ settings, onChange }: Props) {
         />
         <Button theme="primary" onClick={addStaff} loading={saving}>
           添加人员
+        </Button>
+        <Button variant="outline" onClick={() => setPickerVisible(true)}>
+          从工作台选择人员
         </Button>
         <span style={{ fontSize: 12, color: '#9aa3b5', alignSelf: 'center' }}>
           共 {staffList.length} 人
@@ -99,6 +115,13 @@ export default function StaffListEditor({ settings, onChange }: Props) {
       <div style={{ marginTop: 12, fontSize: 12, color: '#9aa3b5' }}>
         说明：名单用于提成计算页「姓名」下拉选择；也可直接在计算页输入新姓名（下次可从名单管理添加）。
       </div>
+
+      <WorkbenchPersonPicker
+        visible={pickerVisible}
+        existing={staffList}
+        onClose={() => setPickerVisible(false)}
+        onConfirm={addFromWorkbench}
+      />
     </div>
   );
 }
