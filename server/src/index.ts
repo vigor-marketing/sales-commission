@@ -12,10 +12,12 @@ import { paymentsRouter } from './routes/payments.js';
 import { commissionsRouter } from './routes/commissions.js';
 import { contractsRouter } from './routes/contracts.js';
 import { feeNamesRouter } from './routes/feeNames.js';
+import { platformEventsRouter } from './routes/platformEvents.js';
 import { restoreDbFromCloud, startPeriodicBackup, backupEnvReady } from './services/backup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
+const HOST = process.env.HOST ?? '0.0.0.0';
 
 /** 启动引导：有云端备份则先恢复，再初始化 schema + 种子，最后开定时备份 */
 async function bootstrap(): Promise<void> {
@@ -38,7 +40,11 @@ app.use(express.json({ limit: '2mb' }));
 
 // 健康检查
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() });
+  res.json({
+    ok: true,
+    dataMode: process.env.EMPTY_DATA_MODE === 'true' ? 'empty-pilot' : 'normal',
+    time: new Date().toISOString(),
+  });
 });
 
 // 业务路由
@@ -49,6 +55,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/commissions', commissionsRouter);
 app.use('/api/contracts', contractsRouter);
 app.use('/api/feeNames', feeNamesRouter);
+app.use('/api/v1', platformEventsRouter);
 
 // 生产模式：托管前端构建产物
 const clientDist = path.join(__dirname, '../../client/dist');
@@ -62,10 +69,8 @@ if (fs.existsSync(clientDist)) {
 // 完成恢复和数据库初始化后再接收流量，避免冷启动时先返回空数据。
 void bootstrap()
   .then(() => {
-    // 绑定 0.0.0.0：局域网内其他设备可通过 http://<本机IP>:PORT 访问
-    app.listen(PORT, '0.0.0.0', () => {
-      // 避免 Windows 终端（GBK）下中文乱码，统一使用 ASCII 日志
-      console.log(`[server] sales-commission API started: http://localhost:${PORT} (LAN: http://0.0.0.0:${PORT})`);
+    app.listen(PORT, HOST, () => {
+      console.log(`[server] sales-commission API started: http://${HOST}:${PORT}`);
     });
   })
   .catch((error: unknown) => {

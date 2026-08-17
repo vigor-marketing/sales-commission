@@ -60,6 +60,38 @@ export function initSchema(): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_fee_names_sort ON fee_names(sort_order, id);
+
+    -- 工作台事件只写入只读同步快照；绝不覆盖财务人员维护的 contracts / calculation_history。
+    CREATE TABLE IF NOT EXISTS platform_event_inbox (
+      event_id    TEXT PRIMARY KEY,
+      event_type  TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      received_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+
+    CREATE TABLE IF NOT EXISTS platform_contract_snapshots (
+      platform_contract_id TEXT PRIMARY KEY,
+      contract_no          TEXT NOT NULL,
+      customer_id          TEXT NOT NULL,
+      owner_id             TEXT NOT NULL,
+      currency             TEXT NOT NULL,
+      amount               REAL NOT NULL,
+      signed_at            TEXT NOT NULL,
+      source_event_id      TEXT NOT NULL,
+      updated_at           TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+
+    CREATE TABLE IF NOT EXISTS platform_payment_snapshots (
+      payment_id           TEXT PRIMARY KEY,
+      platform_contract_id TEXT NOT NULL,
+      currency             TEXT NOT NULL,
+      amount               REAL NOT NULL,
+      confirmed_at         TEXT NOT NULL,
+      source_event_id      TEXT NOT NULL,
+      updated_at           TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_platform_payments_contract ON platform_payment_snapshots(platform_contract_id);
   `);
 
   migrate();
