@@ -43,8 +43,15 @@ export default function StaffListEditor({ settings, onChange }: Props) {
   };
 
   const removeStaff = (n: string) => {
+    // 同时从「人员岗位设置」里移除该人，保证人名在名单/岗位分配两处一致
+    const nextPersonPositions = { ...(settings.personPositions ?? {}) };
+    delete nextPersonPositions[n];
     void applyAndSave(
-      { ...settings, staffList: staffList.filter((s) => s !== n) },
+      {
+        ...settings,
+        staffList: staffList.filter((s) => s !== n),
+        personPositions: nextPersonPositions,
+      },
       `已移除「${n}」`
     );
   };

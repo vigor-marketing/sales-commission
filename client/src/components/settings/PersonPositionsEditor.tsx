@@ -1,8 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Select, Tag, MessagePlugin } from 'tdesign-react';
 import type { Settings } from '../../types';
-import { getCommissionPersons } from '../../api/commissions';
-import { getContracts } from '../../api/contracts';
 import { saveSettings } from '../../api/settings';
 
 interface Props {
@@ -15,23 +12,16 @@ const FALLBACK_POSITIONS = ['销售人员', '技术人员', '项目经理', '销
 
 /** 人员岗位设置：给每个人分配岗位（每人最多 2 个）；岗位来自所有模板 positionOrder 并集 */
 export default function PersonPositionsEditor({ settings, onChange }: Props) {
-  const [persons, setPersons] = useState<string[]>([]);
   const positions = [
     ...new Set(settings.templates.flatMap((t) => t.positionOrder ?? [])),
   ];
   const allPositions = positions.length > 0 ? positions : FALLBACK_POSITIONS;
   const personPositions = settings.personPositions ?? {};
 
-  useEffect(() => {
-    Promise.all([getCommissionPersons().catch(() => [] as string[]), getContracts().catch(() => [] as never[])])
-      .then(([p, c]) => {
-        const contractPersons = (c as Array<{ customerName: string }>).map((x) => x.customerName).filter(Boolean);
-        setPersons([...new Set([...p, ...contractPersons])].sort((a, b) => a.localeCompare(b, 'zh-CN')));
-      })
-      .catch(() => setPersons([]));
-  }, []);
-
-  const allPersonNames = [...new Set([...persons, ...(settings.staffList ?? [])])];
+  // 人名与「人员名单」保持一致：以 staffList 为基准，合并已配置岗位的人（避免丢失既有分配）
+  const allPersonNames = [
+    ...new Set([...(settings.staffList ?? []), ...Object.keys(personPositions)]),
+  ].sort((a, b) => a.localeCompare(b, 'zh-CN'));
 
   const setPersonPositions = (person: string, nextPositions: Array<string | number>) => {
     const list = nextPositions.map(String).filter(Boolean);
