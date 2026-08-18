@@ -1,5 +1,5 @@
 import { InputNumber, Form } from 'tdesign-react';
-import { fmtPct } from '../../utils/format';
+import { fmtPct, deNoise } from '../../utils/format';
 
 interface Props {
   totalRate: number;
@@ -14,7 +14,7 @@ export default function TotalRateEditor({ totalRate, onTotalRateChange }: Props)
         <Form.FormItem label="提成系数">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <InputNumber
-              value={totalRate * 100}
+              value={deNoise(totalRate * 100)}
               onChange={(v) => {
                 const num = Number(v);
                 if (!Number.isNaN(num)) onTotalRateChange(num / 100);

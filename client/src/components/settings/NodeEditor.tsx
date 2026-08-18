@@ -1,6 +1,6 @@
 import { Table, Input, InputNumber, Button } from 'tdesign-react';
 import type { FlowNode } from '../../types';
-import { fmtPct } from '../../utils/format';
+import { fmtPct, deNoise } from '../../utils/format';
 
 interface Props {
   nodes: FlowNode[];
@@ -65,7 +65,7 @@ export default function NodeEditor({ nodes, positionOrder, onChange }: Props) {
       width: 120,
       cell: ({ row }: { row: (typeof data)[number] }) => (
         <InputNumber
-          value={row.nodeRatio * 100}
+          value={deNoise(row.nodeRatio * 100)}
           className="ratio-input"
           min={0}
           max={100}
@@ -85,7 +85,7 @@ export default function NodeEditor({ nodes, positionOrder, onChange }: Props) {
       align: 'center' as const,
       cell: ({ row }: { row: (typeof data)[number] }) => (
         <InputNumber
-          value={(row.positions[pos] ?? 0) * 100}
+          value={deNoise((row.positions[pos] ?? 0) * 100)}
           className="ratio-input"
           min={0}
           max={100}

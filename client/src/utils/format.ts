@@ -14,6 +14,12 @@ export function fmtPct(v: number, digits = 2): string {
   return `${(v * 100).toFixed(digits)}%`;
 }
 
+/** 去除浮点噪声：保留最多 6 位小数（如 30.099999999999998 → 30.1），用于比例 × 100 后的展示值 */
+export function deNoise(v: number, digits = 6): number {
+  const p = 10 ** digits;
+  return Math.round(v * p) / p;
+}
+
 /** 数字输入解析：字符串 → 数字，非法返回 NaN */
 export function parseNum(s: string): number {
   const n = Number(s);
