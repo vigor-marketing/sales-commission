@@ -61,20 +61,21 @@ export default function SettingsPage() {
     settings.templates.find((t) => t.id === activeTemplateId) ?? settings.templates[0];
   const warnings = activeTemplate ? validateLocal(activeTemplate) : [];
 
+  /** 仅更新本地状态（自动保存的改动会立即落库，不标 dirty） */
   const update = (s: Settings) => {
     setSettings(s);
-    setDirty(true);
   };
 
-  /** 更新当前激活模板 */
+  /** 更新当前激活模板（比例/节点/岗位等需点「保存设置」的改动，标 dirty） */
   const updateActiveTemplate = (patch: Partial<Template>) => {
     if (!activeTemplate) return;
-    update({
+    setSettings({
       ...settings,
       templates: settings.templates.map((t) =>
         t.id === activeTemplate.id ? { ...t, ...patch } : t
       ),
     });
+    setDirty(true);
   };
 
   const selectTemplate = (id: string) => {
@@ -205,8 +206,9 @@ export default function SettingsPage() {
   };
 
   const resetDefault = () => {
-    update(defaultSettings());
+    setSettings(defaultSettings());
     setActiveTemplateId(defaultSettings().templates[0].id);
+    setDirty(true);
     MessagePlugin.info('已恢复默认配置（请点击保存生效）');
   };
 

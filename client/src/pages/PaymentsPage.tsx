@@ -99,7 +99,7 @@ export default function PaymentsPage() {
       }
     }
     return rows;
-  }, [records, settings]);
+  }, [records]);
 
   // 候选姓名 = 客户名 + positionPersons 人员 + 数据库人员（去重）
   const allPersonOptions = useMemo(() => {

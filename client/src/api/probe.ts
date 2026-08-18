@@ -16,7 +16,3 @@ export async function isBackendAvailable(): Promise<boolean> {
   }
   return cached;
 }
-
-export function resetBackendProbe(): void {
-  cached = null;
-}

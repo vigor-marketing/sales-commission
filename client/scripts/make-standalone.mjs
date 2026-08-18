@@ -49,7 +49,6 @@ const mainMatch = html.match(/<script\b[^>]*?type=["']module["'][^>]*?src=["']([
 if (mainMatch) {
   const mainSrc = mainMatch[1];
   const mainPath = path.join(distDir, mainSrc.replace(/^\//, ''));
-  const baseDir = path.dirname(mainPath);
 
   const seen = new Set();
   function inlineChunk(absPath, depth = 0) {
