@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Select, MessagePlugin } from 'tdesign-react';
+import { Button, Input, Select, MessagePlugin, DialogPlugin } from 'tdesign-react';
 import type { Settings, Template, FlowNode } from '../types';
 import { getSettings, saveSettings } from '../api/settings';
 import { defaultSettings, validateTemplate as validateLocal } from '../utils/calcCore';
@@ -206,10 +206,22 @@ export default function SettingsPage() {
   };
 
   const resetDefault = () => {
-    setSettings(defaultSettings());
-    setActiveTemplateId(defaultSettings().templates[0].id);
-    setDirty(true);
-    MessagePlugin.info('已恢复默认配置（请点击保存生效）');
+    const dialog = DialogPlugin.confirm({
+      header: '恢复默认配置',
+      body: '此操作将清空人员名单和岗位分配，并把所有模板比例恢复到默认值，确定继续吗？',
+      confirmBtn: { content: '确定恢复', theme: 'danger' },
+      cancelBtn: '取消',
+      onConfirm: () => {
+        setSettings(defaultSettings());
+        setActiveTemplateId(defaultSettings().templates[0].id);
+        setDirty(true);
+        MessagePlugin.info('已恢复默认配置（请点击保存生效）');
+        dialog.destroy();
+      },
+      onClose: () => {
+        dialog.destroy();
+      },
+    });
   };
 
   const handleSave = async () => {
