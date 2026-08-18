@@ -16,6 +16,8 @@ export default function TemplateEditorPage() {
   const [name, setName] = useState('');
   const [template, setTemplate] = useState<Template | null>(null);
   const [newPosition, setNewPosition] = useState('');
+  const [renamingPos, setRenamingPos] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -67,6 +69,50 @@ export default function TemplateEditorPage() {
       positions: {},
     };
     setTemplate({ ...template, nodes: [...template.nodes, newNode] });
+  };
+
+  const startRename = (pos: string) => {
+    setRenamingPos(pos);
+    setRenameValue(pos);
+  };
+
+  /** 岗位改名（仅改当前草稿模板的 positionOrder/nodes） */
+  const commitRename = () => {
+    const oldName = renamingPos;
+    setRenamingPos(null);
+    if (!oldName || !template) return;
+    const newName = renameValue.trim();
+    if (!newName || newName === oldName) return;
+    if (template.positionOrder.includes(newName)) {
+      MessagePlugin.warning(`岗位「${newName}」已存在`);
+      return;
+    }
+    setTemplate({
+      ...template,
+      positionOrder: template.positionOrder.map((p) => (p === oldName ? newName : p)),
+      nodes: template.nodes.map((n) => {
+        const positions = { ...n.positions };
+        if (oldName in positions) {
+          positions[newName] = positions[oldName];
+          delete positions[oldName];
+        }
+        return { ...n, positions };
+      }),
+    });
+  };
+
+  /** 删除岗位（仅改当前草稿模板的 positionOrder/nodes） */
+  const removePosition = (pos: string) => {
+    if (!template) return;
+    setTemplate({
+      ...template,
+      positionOrder: template.positionOrder.filter((p) => p !== pos),
+      nodes: template.nodes.map((n) => {
+        const positions = { ...n.positions };
+        delete positions[pos];
+        return { ...n, positions };
+      }),
+    });
   };
 
   const handleSave = async () => {
@@ -157,6 +203,56 @@ export default function TemplateEditorPage() {
             <Button variant="outline" onClick={addNode}>添加流程节点</Button>
           </div>
         </div>
+
+        {/* 岗位列表：点击名称重命名，× 删除 */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap' }}>
+            岗位（{template.positionOrder.length}）：
+          </span>
+          {template.positionOrder.map((pos) =>
+            renamingPos === pos ? (
+              <Input
+                key={pos}
+                autofocus
+                size="small"
+                value={renameValue}
+                onChange={(v) => setRenameValue(String(v))}
+                onEnter={commitRename}
+                onBlur={commitRename}
+                style={{ width: 130 }}
+              />
+            ) : (
+              <div
+                key={pos}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 10px',
+                  background: '#f0f6ff',
+                  border: '1px solid #cfe0ff',
+                  borderRadius: 6,
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ cursor: 'pointer' }} title="点击重命名" onClick={() => startRename(pos)}>
+                  {pos}
+                </span>
+                <span
+                  style={{ cursor: 'pointer', color: '#9aa3b5', fontWeight: 700, padding: '0 4px' }}
+                  title="删除岗位"
+                  onClick={() => removePosition(pos)}
+                >
+                  ×
+                </span>
+              </div>
+            )
+          )}
+          {template.positionOrder.length === 0 && (
+            <span style={{ fontSize: 12, color: '#9aa3b5' }}>暂无岗位，请先添加</span>
+          )}
+        </div>
+
         <div style={{ marginBottom: 16 }}>
           <RatioWarn warnings={warnings} />
         </div>
