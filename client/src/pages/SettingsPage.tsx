@@ -288,9 +288,6 @@ export default function SettingsPage() {
             <Button variant="outline" onClick={() => navigate('/settings/templates/new')}>
               添加表格类型
             </Button>
-            <Button variant="outline" onClick={resetTemplates}>
-              恢复表格
-            </Button>
             <Button variant="outline" theme="warning" onClick={resetDefault}>
               恢复默认
             </Button>
@@ -342,6 +339,9 @@ export default function SettingsPage() {
             </Button>
             <Button variant="outline" onClick={addNode}>
               添加流程节点
+            </Button>
+            <Button variant="outline" onClick={resetTemplates}>
+              恢复表格
             </Button>
           </div>
         </div>
