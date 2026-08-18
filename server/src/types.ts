@@ -195,35 +195,6 @@ export interface HistoryRecord {
   createdAt: string;
 }
 
-/** 收款统计单行 */
-export interface PaymentRow {
-  id: number;
-  contractNo: string;
-  customerName: string;
-  /** 收款月份 YYYY-MM */
-  month: string;
-  currency: Currency;
-  /** 原币金额 */
-  amount: number;
-  /** 汇率 */
-  rate: number;
-  /** 人民币金额 */
-  amountCNY: number;
-  /** 是否已收款 */
-  received: boolean;
-  /** 该合同收款计划中的第几笔（1~4） */
-  planIndex: number;
-  /** 是否全款（该合同收款计划仅一笔） */
-  fullPayment?: boolean;
-  /** 收款比例（小数 0~1） */
-  ratio?: number;
-  /** 该合同收款计划共几笔 */
-  totalPlanCount?: number;
-  /** 备注 */
-  note?: string;
-  createdAt: string;
-}
-
 /** 合同主数据（合同录入页管理：业绩/费用/收款计划/岗位人员等） */
 export interface Contract {
   id: number;

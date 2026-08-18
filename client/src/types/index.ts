@@ -193,30 +193,6 @@ export interface ContractLookup {
   totalPlanCount?: number;
 }
 
-/** 收款统计单行 */
-export interface PaymentRow {
-  id: number;
-  contractNo: string;
-  customerName: string;
-  month: string;
-  currency: Currency;
-  amount: number;
-  rate: number;
-  amountCNY: number;
-  received: boolean;
-  /** 该合同收款计划中的第几笔（1~4） */
-  planIndex: number;
-  /** 是否全款（该合同收款计划仅一笔） */
-  fullPayment?: boolean;
-  /** 收款比例（小数 0~1） */
-  ratio?: number;
-  /** 该合同收款计划共几笔 */
-  totalPlanCount?: number;
-  /** 备注 */
-  note?: string;
-  createdAt: string;
-}
-
 /** 合同主数据（合同录入页管理：业绩/费用/收款计划/岗位人员等） */
 export interface Contract {
   id: number;
@@ -242,21 +218,6 @@ export interface FeeName {
   name: string;
   sortOrder: number;
   createdAt: string;
-}
-
-/** 收款统计响应 */
-export interface PaymentsPageData {
-  list: PaymentRow[];
-  total: number;
-  page: number;
-  pageSize: number;
-  month: string;
-  filters: { month: string; contractNo: string; customerName: string };
-  summary: {
-    totalAmountCNY: number;
-    count: number;
-    byCurrency: Record<string, { amount: number; amountCNY: number }>;
-  };
 }
 
 /** 合同已录的收款计划列表项（提成计算页用） */

@@ -8,7 +8,6 @@ import { seedIfEmpty } from './db/seed.js';
 import { settingsRouter } from './routes/settings.js';
 import { calculateRouter } from './routes/calculate.js';
 import { historyRouter } from './routes/history.js';
-import { paymentsRouter } from './routes/payments.js';
 import { commissionsRouter } from './routes/commissions.js';
 import { contractsRouter } from './routes/contracts.js';
 import { feeNamesRouter } from './routes/feeNames.js';
@@ -51,7 +50,6 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/settings', settingsRouter);
 app.use('/api/calculate', calculateRouter);
 app.use('/api/history', historyRouter);
-app.use('/api/payments', paymentsRouter);
 app.use('/api/commissions', commissionsRouter);
 app.use('/api/contracts', contractsRouter);
 app.use('/api/feeNames', feeNamesRouter);

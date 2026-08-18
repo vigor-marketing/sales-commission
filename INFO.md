@@ -49,7 +49,7 @@ sales-commission/
 │   └── src/
 │       ├── index.ts
 │       ├── db/          # 建表 / 种子 / 迁移
-│       ├── routes/      # settings / calculate / history / payments
+│       ├── routes/      # settings / calculate / history / contracts / commissions / feeNames
 │       ├── services/    # 计算核心（权重归一化）
 │       └── utils/       # 校验
 └── client/          # React 前端（TDesign）
@@ -83,10 +83,7 @@ sales-commission/
 | GET | `/api/history?page=&pageSize=` | 历史分页（上限 10000 支持全量） |
 | GET | `/api/history/contract?contractNo=` | 按合同号查最新记录（自动带出） |
 | DELETE | `/api/history/:id` | 删除单条历史 |
-| GET | `/api/payments` | 收款统计（月份/合同/姓名/状态多条件筛选） |
-| GET | `/api/payments/yearly?year=` | 年度看板（12 月人民币汇总） |
-| GET | `/api/payments/months` | 有收款记录的月份列表 |
-| GET | `/api/payments/contracts` | 合同号列表（供下拉多选） |
+| GET | `/api/commissions/persons` | 可选销售人员（历史/合同/设置名单合并去重） |
 
 ### API 调用示例
 
@@ -111,18 +108,6 @@ curl -X POST http://localhost:3001/api/calculate \
 
 ```bash
 curl http://localhost:3001/api/settings
-```
-
-**收款统计（多条件筛选）**：
-
-```bash
-curl "http://localhost:3001/api/payments?month=2026-08&contractNos=HT-2026-001,HT-2026-004&status=received"
-```
-
-**年度看板**：
-
-```bash
-curl "http://localhost:3001/api/payments/yearly?year=2026"
 ```
 
 ---
