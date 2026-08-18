@@ -208,14 +208,19 @@ export default function SettingsPage() {
   const resetDefault = () => {
     const dialog = DialogPlugin.confirm({
       header: '恢复默认配置',
-      body: '此操作将清空人员名单和岗位分配，并把所有模板比例恢复到默认值，确定继续吗？',
+      body: '此操作将把表格类型及其比例恢复为默认值，人员名单和岗位分配保持不变，确定继续吗？',
       confirmBtn: { content: '确定恢复', theme: 'danger' },
       cancelBtn: '取消',
       onConfirm: () => {
-        setSettings(defaultSettings());
-        setActiveTemplateId(defaultSettings().templates[0].id);
+        const def = defaultSettings();
+        setSettings({
+          ...def,
+          staffList: settings.staffList ?? [],
+          personPositions: settings.personPositions ?? {},
+        });
+        setActiveTemplateId(def.templates[0].id);
         setDirty(true);
-        MessagePlugin.info('已恢复默认配置（请点击保存生效）');
+        MessagePlugin.info('已恢复默认表格配置，人员与岗位保持不变（请点击保存生效）');
         dialog.destroy();
       },
       onClose: () => {
