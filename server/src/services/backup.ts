@@ -1,41 +1,34 @@
 /**
  * 财务数据备份/恢复
- * - 正式主备份：独立 COS 存储桶（cos-nodejs-sdk-v5 直传，对象 sales-commission/财务数据.db）
+ * - 正式主备份：传统 CloudBase COS（@cloudbase/node-sdk，对象 sales-commission/财务数据.db）
  * - 本地兜底：本机备份目录（防误删/单文件损坏）
  * - 启动恢复顺序：COS 主对象 → 本地最新快照（仅当数据库文件缺失时才恢复，避免旧备份覆盖新数据）
  * - 写后防抖 800ms，另有 10 分钟兜底备份
  *
  * 访问凭据仅保存在运行环境变量中，绝不下发给前端。
  */
-import COS from 'cos-nodejs-sdk-v5';
+import cloudbase, { type CloudBase } from '@cloudbase/node-sdk';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getDb, getDbPath } from '../db/database.js';
 
-const OBJECT_KEY = 'sales-commission/财务数据.db';
+const CLOUD_PATH = 'sales-commission/财务数据.db';
+const LEGACY_CLOUD_PATH = 'sales-commission/commission.db';
 
-function cosBucket(): string {
-  return process.env.COS_BUCKET ?? '';
-}
-function cosRegion(): string {
-  return process.env.COS_REGION ?? '';
-}
-function cosSecretId(): string {
-  return process.env.COS_SECRET_ID ?? '';
-}
-function cosSecretKey(): string {
-  return process.env.COS_SECRET_KEY ?? '';
+/** 环境 ID：云托管注入 CBR_ENV_ID（TCBR）；本机用 ENV_ID/CBR_ENV_ID 显式指定 */
+export function envId(): string {
+  return (
+    process.env.CBR_ENV_ID ??
+    process.env.TCB_ENV_ID ??
+    process.env.SCF_NAMESPACE ??
+    process.env.TENCENTCLOUD_ENV ??
+    process.env.ENV_ID ??
+    ''
+  );
 }
 
-let cosApp: COS | null = null;
-function getCos(): COS {
-  if (!cosApp) {
-    cosApp = new COS({
-      SecretId: cosSecretId(),
-      SecretKey: cosSecretKey(),
-    });
-  }
-  return cosApp;
+function backupBucket(): string {
+  return process.env.BACKUP_BUCKET ?? '';
 }
 
 function isSqlite(content: Buffer): boolean {
@@ -56,20 +49,35 @@ function writeRestoredDb(content: Buffer, source: string): boolean {
   return true;
 }
 
-/** 上传数据库到独立 COS 主对象。 */
+let sdkApp: CloudBase | null = null;
+function getCosApp(): CloudBase {
+  if (!sdkApp) {
+    const secretId = process.env.BACKUP_SECRET_ID;
+    const secretKey = process.env.BACKUP_SECRET_KEY;
+    sdkApp = cloudbase.init({
+      env: envId(),
+      ...(secretId && secretKey ? { secretId, secretKey } : {}),
+    });
+  }
+  return sdkApp;
+}
+
+function fileId(cloudPath: string): string {
+  return `cloud://${envId()}.${backupBucket()}/${cloudPath}`;
+}
+
+/** 上传数据库到传统 CloudBase COS 主对象。 */
 export async function backupDbToCos(): Promise<boolean> {
   const dbPath = getDbPath();
   if (!fs.existsSync(dbPath) || !backupEnvReady()) return false;
   try {
     // WAL 模式下先做 checkpoint，确保主库文件包含本轮已提交的数据。
     getDb().pragma('wal_checkpoint(TRUNCATE)');
-    await getCos().putObject({
-      Bucket: cosBucket(),
-      Region: cosRegion(),
-      Key: OBJECT_KEY,
-      Body: fs.createReadStream(dbPath),
+    await getCosApp().uploadFile({
+      cloudPath: CLOUD_PATH,
+      fileContent: fs.createReadStream(dbPath),
     });
-    console.log(`[backup] 已写入云端备份: ${OBJECT_KEY}`);
+    console.log(`[backup] 已写入云端备份: ${CLOUD_PATH}`);
     return true;
   } catch (error) {
     console.error('[backup] COS 上传失败:', error instanceof Error ? error.message : error);
@@ -129,7 +137,7 @@ function restoreFromLocal(): boolean {
   return false;
 }
 
-/** 从 COS 主对象恢复数据库；失败时回退本地最新快照。仅当数据库文件缺失时才执行。 */
+/** 从 COS 主对象/历史兼容对象恢复；失败时回退本地最新快照。仅当数据库文件缺失时才执行。 */
 export async function restoreDbFromCloud(): Promise<boolean> {
   const dbPath = getDbPath();
   if (fs.existsSync(dbPath)) {
@@ -137,18 +145,16 @@ export async function restoreDbFromCloud(): Promise<boolean> {
   }
 
   if (backupEnvReady()) {
-    try {
-      const result = await getCos().getObject({
-        Bucket: cosBucket(),
-        Region: cosRegion(),
-        Key: OBJECT_KEY,
-      });
-      const content = result.Body;
-      if (content && Buffer.isBuffer(content) && writeRestoredDb(Buffer.from(content), `COS:${OBJECT_KEY}`)) {
-        return true;
+    const app = getCosApp();
+    for (const cloudPath of [CLOUD_PATH, LEGACY_CLOUD_PATH]) {
+      try {
+        const result = await app.downloadFile({ fileID: fileId(cloudPath) });
+        const content = result.fileContent;
+        if (!content || typeof content === 'string') continue;
+        if (writeRestoredDb(Buffer.from(content), `COS:${cloudPath}`)) return true;
+      } catch {
+        // 路径不存在或暂不可读时继续尝试下一条兼容路径。
       }
-    } catch {
-      // COS 读取失败 → 回退本地快照
     }
   }
 
@@ -184,5 +190,5 @@ export function startPeriodicBackup(): void {
 
 /** COS 主备份环境是否已配置。 */
 export function backupEnvReady(): boolean {
-  return Boolean(cosBucket() && cosRegion() && cosSecretId() && cosSecretKey());
+  return Boolean(envId() && backupBucket() && process.env.BACKUP_SECRET_ID && process.env.BACKUP_SECRET_KEY);
 }

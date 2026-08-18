@@ -11,9 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.3",
     "better-sqlite3": "^12.4.1",
     "cors": "^2.8.5",
-    "cos-nodejs-sdk-v5": "^2.15.4",
     "express": "^4.21.2"
   },
   "devDependencies": {
