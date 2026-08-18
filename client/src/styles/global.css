@@ -318,6 +318,7 @@ h4 {
   font-weight: 600 !important;
   font-size: 13px !important;
   white-space: nowrap;
+  text-align: center !important;
 }
 
 .t-table__row--hover {
