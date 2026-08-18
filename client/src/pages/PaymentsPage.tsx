@@ -114,10 +114,11 @@ export default function PaymentsPage() {
     return [...set].sort();
   }, [records, persons, settings]);
 
-  // 候选岗位 = 所有 records 中出现过的岗位（+ 销售类岗位固定列表）
+  // 候选岗位 = 系统设置模板定义的所有岗位（并集）+ 历史记录里出现过的岗位（兜底，含改名/已删岗位）
   const allPositionOptions = useMemo(() => {
     const set = new Set<string>();
     SALES_POSITIONS.forEach((p) => set.add(p));
+    (settings?.templates ?? []).forEach((t) => (t.positionOrder ?? []).forEach((p) => set.add(p)));
     records.forEach((r) => {
       const pt = r.result?.positionTotals ?? {};
       Object.keys(pt).forEach((p) => set.add(p));
@@ -125,7 +126,7 @@ export default function PaymentsPage() {
       Object.keys(pp).forEach((p) => set.add(p));
     });
     return [...set].sort();
-  }, [records]);
+  }, [records, settings]);
 
   // 逐级筛选：选岗位后，姓名候选限定为该岗位人员（未选岗位 = 全部人员）
   const personOptionsFiltered = useMemo(() => {
