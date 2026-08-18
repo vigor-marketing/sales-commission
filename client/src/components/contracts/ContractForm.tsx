@@ -216,6 +216,7 @@ export default function ContractForm({
   return (
     <div>
       {/* ① 基础信息：先选销售姓名（下拉），再录入合同号 */}
+      <div style={{ fontWeight: 600, fontSize: 14, color: '#4a5568', marginBottom: 10 }}>① 基础信息（销售姓名 / 合同号 / 表格类型）</div>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ minWidth: 80, textAlign: 'right', color: '#4a5568' }}>
