@@ -87,6 +87,40 @@ export async function backupDbToCos(): Promise<boolean> {
   }
 }
 
+/** 本地备份：写入本机备份目录（防数据丢失的第一道防线），保留最近 N 份快照。 */
+export async function backupDbToLocal(): Promise<boolean> {
+  const dbPath = getDbPath();
+  if (!fs.existsSync(dbPath)) return false;
+  const dir = process.env.LOCAL_BACKUP_DIR ?? path.join(path.dirname(dbPath), 'backups');
+  const keep = Number(process.env.LOCAL_BACKUP_KEEP ?? 56);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const tmp = path.join(dir, `.commission-${ts}.db.tmp`);
+    const dest = path.join(dir, `commission-${ts}.db`);
+    await getDb().backup(tmp);
+    fs.renameSync(tmp, dest);
+    // 清理旧备份，保留最近 keep 份
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('commission-') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    for (const f of files.slice(keep)) {
+      try {
+        fs.unlinkSync(path.join(dir, f));
+      } catch {
+        // 忽略清理失败
+      }
+    }
+    console.log(`[backup] 本地备份完成: ${dest}`);
+    return true;
+  } catch (error) {
+    console.error('[backup] 本地备份失败:', error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
 /** 从传统 CloudBase COS 主对象和历史兼容对象依次恢复数据库。 */
 export async function restoreDbFromCloud(): Promise<boolean> {
   if (!envId() || !backupBucket()) return false;
@@ -109,11 +143,12 @@ export async function restoreDbFromCloud(): Promise<boolean> {
 
 let timer: NodeJS.Timeout | null = null;
 
-/** 写操作后触发主备份（防抖 800ms，合并连续写入）。 */
+/** 写操作后触发主备份（防抖 800ms，合并连续写入）。本地备份始终执行，COS 备份需环境就绪。 */
 export function scheduleBackup(): void {
   if (timer) return;
   timer = setTimeout(() => {
     timer = null;
+    void backupDbToLocal();
     void backupDbToCos();
   }, 800);
 }
