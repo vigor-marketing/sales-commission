@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newPosition, setNewPosition] = useState('');
+  const [renamingPos, setRenamingPos] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState('');
   const [dirty, setDirty] = useState(false);
   const navigate = useNavigate();
@@ -124,6 +126,84 @@ export default function SettingsPage() {
     MessagePlugin.success(`已添加岗位「${name}」`);
   };
 
+  /** 岗位改名：同步更新模板 positionOrder/nodes、人员岗位设置 personPositions */
+  const commitRename = () => {
+    const oldName = renamingPos;
+    setRenamingPos(null);
+    if (!oldName || !activeTemplate) return;
+    const newName = renameValue.trim();
+    if (!newName || newName === oldName) return;
+    if (activeTemplate.positionOrder.includes(newName)) {
+      MessagePlugin.warning(`岗位「${newName}」已存在`);
+      return;
+    }
+    const next: Settings = {
+      ...settings,
+      templates: settings.templates.map((t) =>
+        t.id === activeTemplate.id
+          ? {
+              ...t,
+              positionOrder: t.positionOrder.map((p) => (p === oldName ? newName : p)),
+              nodes: t.nodes.map((n) => {
+                const positions = { ...n.positions };
+                if (oldName in positions) {
+                  positions[newName] = positions[oldName];
+                  delete positions[oldName];
+                }
+                return { ...n, positions };
+              }),
+            }
+          : t
+      ),
+      personPositions: Object.fromEntries(
+        Object.entries(settings.personPositions ?? {}).map(([person, positions]) => [
+          person,
+          positions.map((p) => (p === oldName ? newName : p)),
+        ])
+      ),
+    };
+    update(next);
+    saveSettings(next)
+      .then(() => MessagePlugin.success(`已将「${oldName}」重命名为「${newName}」`))
+      .catch((e) => MessagePlugin.error(e instanceof Error ? e.message : '重命名失败，请重试'));
+  };
+
+  const startRename = (pos: string) => {
+    setRenamingPos(pos);
+    setRenameValue(pos);
+  };
+
+  /** 删除岗位：同步移除模板 positionOrder/nodes、人员岗位设置 personPositions */
+  const removePosition = (pos: string) => {
+    if (!activeTemplate) return;
+    const next: Settings = {
+      ...settings,
+      templates: settings.templates.map((t) =>
+        t.id === activeTemplate.id
+          ? {
+              ...t,
+              positionOrder: t.positionOrder.filter((p) => p !== pos),
+              nodes: t.nodes.map((n) => {
+                const positions = { ...n.positions };
+                delete positions[pos];
+                return { ...n, positions };
+              }),
+            }
+          : t
+      ),
+      personPositions: Object.fromEntries(
+        Object.entries(settings.personPositions ?? {}).map(([person, positions]) => [
+          person,
+          positions.filter((p) => p !== pos),
+        ])
+      ),
+    };
+    update(next);
+    saveSettings(next)
+      .then(() => MessagePlugin.success(`已删除岗位「${pos}」`))
+      .catch((e) => MessagePlugin.error(e instanceof Error ? e.message : '删除失败，请重试'));
+  };
+
   const resetDefault = () => {
     update(defaultSettings());
     setActiveTemplateId(defaultSettings().templates[0].id);
@@ -221,6 +301,59 @@ export default function SettingsPage() {
               添加流程节点
             </Button>
           </div>
+        </div>
+
+        {/* 岗位列表：点击名称重命名，× 删除（改动会同步到合同录入与人员岗位设置） */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', whiteSpace: 'nowrap' }}>
+            岗位（{activeTemplate.positionOrder.length}）：
+          </span>
+          {activeTemplate.positionOrder.map((pos) =>
+            renamingPos === pos ? (
+              <Input
+                key={pos}
+                autofocus
+                size="small"
+                value={renameValue}
+                onChange={(v) => setRenameValue(String(v))}
+                onEnter={commitRename}
+                onBlur={commitRename}
+                style={{ width: 130 }}
+              />
+            ) : (
+              <div
+                key={pos}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 10px',
+                  background: '#f0f6ff',
+                  border: '1px solid #cfe0ff',
+                  borderRadius: 6,
+                  fontSize: 13,
+                }}
+              >
+                <span
+                  style={{ cursor: 'pointer' }}
+                  title="点击重命名"
+                  onClick={() => startRename(pos)}
+                >
+                  {pos}
+                </span>
+                <span
+                  style={{ cursor: 'pointer', color: '#9aa3b5', fontWeight: 700, padding: '0 4px' }}
+                  title="删除岗位"
+                  onClick={() => removePosition(pos)}
+                >
+                  ×
+                </span>
+              </div>
+            )
+          )}
+          {activeTemplate.positionOrder.length === 0 && (
+            <span style={{ fontSize: 12, color: '#9aa3b5' }}>暂无岗位，请先添加</span>
+          )}
         </div>
 
         <div style={{ marginBottom: 16 }}>

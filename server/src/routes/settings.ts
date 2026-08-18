@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { readSettings, saveSettings, defaultTemplates } from '../db/seed.js';
 import { validateTemplate } from '../utils/validation.js';
 import { scheduleBackup } from '../services/backup.js';
+import { getDb } from '../db/database.js';
 import type { Settings, Template, Currency } from '../types.js';
 
 export const settingsRouter = Router();
@@ -61,12 +62,76 @@ settingsRouter.put('/', (req, res) => {
 
   const settings: Settings = { templates, staffList, personPositions };
 
+  // 岗位重命名/删除 → 同步到已录入合同（position_persons 键名保持一致）
+  try {
+    cascadePositionChanges(readSettings(), settings);
+  } catch {
+    // 级联失败不阻断设置保存
+  }
+
   const warnings = settings.templates.flatMap((t) => validateTemplate(t));
   saveSettings(settings);
   // 数据变更 → 触发云端备份
   scheduleBackup();
   res.json({ data: readSettings(), warnings });
 });
+
+/**
+ * 岗位重命名/删除时，同步更新已录入合同的 position_persons 键名。
+ * 按模板 id 对齐新旧 positionOrder：删减岗位与新增岗位逐一对齐视为重命名，多余删减视为删除。
+ */
+function cascadePositionChanges(oldSettings: Settings, newSettings: Settings): void {
+  const oldById = new Map(oldSettings.templates.map((t) => [t.id, t]));
+  const db = getDb();
+
+  for (const nt of newSettings.templates) {
+    const ot = oldById.get(nt.id);
+    if (!ot) continue;
+    const oldOrder = ot.positionOrder ?? [];
+    const newOrder = nt.positionOrder ?? [];
+    const removed = oldOrder.filter((p) => !newOrder.includes(p));
+    const added = newOrder.filter((p) => !oldOrder.includes(p));
+
+    const renames = new Map<string, string>();
+    const n = Math.min(removed.length, added.length);
+    for (let i = 0; i < n; i++) renames.set(removed[i], added[i]);
+    const deletes = removed.slice(n);
+
+    if (renames.size === 0 && deletes.length === 0) continue;
+
+    const rows = db
+      .prepare(`SELECT id, position_persons_json FROM contracts WHERE template_id = ?`)
+      .all(nt.id) as Array<{ id: number; position_persons_json: string }>;
+    if (rows.length === 0) continue;
+
+    const update = db.prepare(
+      `UPDATE contracts SET position_persons_json = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+    );
+    for (const row of rows) {
+      let pp: Record<string, string> = {};
+      try {
+        pp = JSON.parse(row.position_persons_json) || {};
+      } catch {
+        pp = {};
+      }
+      let changed = false;
+      for (const [from, to] of renames) {
+        if (from in pp) {
+          pp[to] = pp[from];
+          delete pp[from];
+          changed = true;
+        }
+      }
+      for (const del of deletes) {
+        if (del in pp) {
+          delete pp[del];
+          changed = true;
+        }
+      }
+      if (changed) update.run(JSON.stringify(pp), row.id);
+    }
+  }
+}
 
 function sanitizeRates(raw: unknown): Record<Currency, number> {
   const base = defaultTemplates()[0].defaultRates;
