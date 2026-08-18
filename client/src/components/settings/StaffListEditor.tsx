@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Input, Button, Tag, MessagePlugin, Empty } from 'tdesign-react';
 import type { Settings } from '../../types';
 import { saveSettings } from '../../api/settings';
-import WorkbenchPersonPicker from './WorkbenchPersonPicker';
+import { openOrgPicker } from '../../api/workbench';
 
 interface Props {
   settings: Settings;
@@ -13,7 +13,7 @@ interface Props {
 export default function StaffListEditor({ settings, onChange }: Props) {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [pickerVisible, setPickerVisible] = useState(false);
+  const [picking, setPicking] = useState(false);
   const staffList = settings.staffList ?? [];
 
   /** 更新本地状态并立即持久化（人员增删无需再点「保存设置」） */
@@ -58,15 +58,24 @@ export default function StaffListEditor({ settings, onChange }: Props) {
     );
   };
 
-  /** 从工作台选择器批量添加（去重后一次性持久化） */
-  const addFromWorkbench = (names: string[]) => {
-    const fresh = names.filter((n) => !staffList.includes(n));
-    if (fresh.length === 0) return;
-    void applyAndSave(
-      { ...settings, staffList: [...staffList, ...fresh] },
-      `已添加 ${fresh.length} 人`
-    );
-    setPickerVisible(false);
+  /** 打开平台 /org-picker 选择人员（多选，支持按部门全选/清空），去重后一次保存 */
+  const pickFromWorkbench = () => {
+    setPicking(true);
+    openOrgPicker('multi', '选择人员')
+      .then((persons) => {
+        if (persons.length === 0) return;
+        const fresh = persons.map((p) => p.name).filter((n) => !staffList.includes(n));
+        if (fresh.length === 0) {
+          MessagePlugin.info('所选成员均已在名单中');
+          return;
+        }
+        void applyAndSave(
+          { ...settings, staffList: [...staffList, ...fresh] },
+          `已添加 ${fresh.length} 人`
+        );
+      })
+      .catch((e) => MessagePlugin.warning(e instanceof Error ? e.message : '选择人员失败'))
+      .finally(() => setPicking(false));
   };
 
   return (
@@ -84,7 +93,7 @@ export default function StaffListEditor({ settings, onChange }: Props) {
         <Button theme="primary" onClick={addStaff} loading={saving}>
           添加人员
         </Button>
-        <Button variant="outline" onClick={() => setPickerVisible(true)}>
+        <Button variant="outline" loading={picking} onClick={pickFromWorkbench}>
           从工作台选择人员
         </Button>
         <span style={{ fontSize: 12, color: '#9aa3b5', alignSelf: 'center' }}>
@@ -115,13 +124,6 @@ export default function StaffListEditor({ settings, onChange }: Props) {
       <div style={{ marginTop: 12, fontSize: 12, color: '#9aa3b5' }}>
         说明：名单用于提成计算页「姓名」下拉选择；也可直接在计算页输入新姓名（下次可从名单管理添加）。
       </div>
-
-      <WorkbenchPersonPicker
-        visible={pickerVisible}
-        existing={staffList}
-        onClose={() => setPickerVisible(false)}
-        onConfirm={addFromWorkbench}
-      />
     </div>
   );
 }
