@@ -25,6 +25,10 @@ export function loadLocalSettings(): Settings | null {
       return {
         templates: parsed.templates,
         staffList: Array.isArray(parsed.staffList) ? parsed.staffList : [],
+        personPositions:
+          parsed.personPositions && typeof parsed.personPositions === 'object'
+            ? (parsed.personPositions as Record<string, string[]>)
+            : {},
       };
     }
     // 旧格式迁移：把 nodes/positionOrder 包装成单个模板
@@ -40,6 +44,10 @@ export function loadLocalSettings(): Settings | null {
       return {
         templates: [tpl],
         staffList: Array.isArray(parsed.staffList) ? parsed.staffList : [],
+        personPositions:
+          parsed.personPositions && typeof parsed.personPositions === 'object'
+            ? (parsed.personPositions as Record<string, string[]>)
+            : {},
       };
     }
     return null;
