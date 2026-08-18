@@ -205,10 +205,11 @@ export default function SettingsPage() {
       .catch((e) => MessagePlugin.error(e instanceof Error ? e.message : '删除失败，请重试'));
   };
 
-  const resetDefault = () => {
+  /** 恢复表格：仅重置表格类型与比例，保留人员名单与岗位分配 */
+  const resetTemplates = () => {
     const dialog = DialogPlugin.confirm({
-      header: '恢复默认配置',
-      body: '此操作将把表格类型及其比例恢复为默认值，人员名单和岗位分配保持不变，确定继续吗？',
+      header: '恢复表格',
+      body: '将把表格类型及其比例恢复为默认值，人员名单和岗位分配保持不变。确定继续吗？',
       confirmBtn: { content: '确定恢复', theme: 'danger' },
       cancelBtn: '取消',
       onConfirm: () => {
@@ -220,7 +221,27 @@ export default function SettingsPage() {
         });
         setActiveTemplateId(def.templates[0].id);
         setDirty(true);
-        MessagePlugin.info('已恢复默认表格配置，人员与岗位保持不变（请点击保存生效）');
+        MessagePlugin.info('已恢复默认表格，人员与岗位保持不变（请点击保存生效）');
+        dialog.destroy();
+      },
+      onClose: () => {
+        dialog.destroy();
+      },
+    });
+  };
+
+  /** 恢复默认：全部数据（表格 + 人员名单 + 岗位分配）恢复为默认值 */
+  const resetDefault = () => {
+    const dialog = DialogPlugin.confirm({
+      header: '恢复默认配置',
+      body: '此操作将清空人员名单和岗位分配，并把所有表格类型恢复为默认值，确定继续吗？',
+      confirmBtn: { content: '确定恢复', theme: 'danger' },
+      cancelBtn: '取消',
+      onConfirm: () => {
+        setSettings(defaultSettings());
+        setActiveTemplateId(defaultSettings().templates[0].id);
+        setDirty(true);
+        MessagePlugin.info('已恢复全部默认配置（请点击保存生效）');
         dialog.destroy();
       },
       onClose: () => {
@@ -266,6 +287,9 @@ export default function SettingsPage() {
           <div className="toolbar">
             <Button variant="outline" onClick={() => navigate('/settings/templates/new')}>
               添加表格类型
+            </Button>
+            <Button variant="outline" onClick={resetTemplates}>
+              恢复表格
             </Button>
             <Button variant="outline" theme="warning" onClick={resetDefault}>
               恢复默认
