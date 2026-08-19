@@ -347,6 +347,18 @@ h4 {
   padding-bottom: 9px !important;
 }
 
+/* 所有表格内文字统一居中（用户要求） */
+.t-table td,
+.t-table th {
+  text-align: center !important;
+}
+
+/* 表格内输入框文字也居中 */
+.t-table .t-input__inner,
+.t-table .t-input-number__input {
+  text-align: center !important;
+}
+
 /* ============================================================ 状态指示器 */
 .status-dot {
   display: inline-flex;
