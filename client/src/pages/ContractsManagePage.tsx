@@ -176,39 +176,42 @@ export default function ContractsManagePage() {
     { colKey: 'salesAmount', title: '业绩', width: 120, align: 'right' as const, cell: ({ row }: { row: Contract }) => `${row.salesAmountOrig.toLocaleString()} ${row.salesCurrency}` },
     { colKey: 'fees', title: '费用（¥）', width: 100, align: 'right' as const, cell: ({ row }: { row: Contract }) => fmtMoney(row.salesFees.reduce((s, f) => s + (f.amountCNY || 0), 0)) },
     {
-      colKey: 'plan', title: '收款进度', width: 200, cell: ({ row }: { row: Contract }) => {
+      colKey: 'plan', title: '收款进度', width: 170, cell: ({ row }: { row: Contract }) => {
         const st = statusMap.get(row.contractNo);
         const saved = st?.savedCount ?? 0;
-        const total = row.totalPlanCount ?? 1;
         // 收完判定：累计收款比例 = 100%（多笔累加 = 合同金额）；旧数据无 ratio 时用已收金额 ≈ 合同业绩人民币
         const salesCNY =
           (row.salesCurrency === 'CNY' ? 1 : row.salesRate) * row.salesAmountOrig;
         const ratioOk = (st?.paidRatio ?? 0) >= 0.9999;
         const amountOk = salesCNY > 0 && (st?.receivedCNY ?? 0) >= salesCNY - 0.01;
         const done = ratioOk || amountOk;
-        const paidPct = st?.paidRatio !== undefined ? Math.min(100, Math.round(st.paidRatio * 10000) / 100) : null;
+        const pct = done
+          ? 100
+          : st?.paidRatio !== undefined
+            ? Math.min(100, Math.round(st.paidRatio * 10000) / 100)
+            : 0;
+        const color = done ? '#00a870' : saved > 0 ? '#e37318' : '#c4c9d4';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ color: done ? '#00a870' : (saved > 0 ? '#e37318' : '#9aa3b5') }}>
-                已录 {saved}/{total} 笔
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '2px 0' }}>
+            {/* 进度条 + 百分比 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, height: 8, background: '#eef1f6', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4 }} />
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color, minWidth: 42, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {pct}%
               </span>
-              {paidPct !== null && (
-                <span style={{ color: done ? '#00a870' : '#e37318', fontWeight: 600 }}>
-                  累计收款 {paidPct.toFixed(1)}%
+            </div>
+            {/* 状态 + 已收金额（一行） */}
+            <div style={{ fontSize: 12, color: '#6b7588', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ color, fontWeight: 600 }}>{done ? '已收完' : saved > 0 ? '未收满' : '未录入'}</span>
+              {saved > 0 && (
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  已收 ¥{fmtMoney(st?.receivedCNY ?? 0)}
+                  {(st?.unreceivedCNY ?? 0) > 0 && <> · 未收 ¥{fmtMoney(st?.unreceivedCNY ?? 0)}</>}
                 </span>
               )}
-              {done ? (
-                <span className="tag-currency tag-CNY">已收完</span>
-              ) : (
-                saved > 0 && <span className="tag-currency tag-EUR">未收满</span>
-              )}
             </div>
-            {saved > 0 && (
-              <span style={{ color: '#6b7588' }}>
-                收 ¥{fmtMoney(st?.receivedCNY ?? 0)} / 未收 ¥{fmtMoney(st?.unreceivedCNY ?? 0)}
-              </span>
-            )}
           </div>
         );
       },
