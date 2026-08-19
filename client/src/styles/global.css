@@ -353,6 +353,12 @@ h4 {
   text-align: center !important;
 }
 
+/* 原生表格（按人员提成明细表等）文字也居中 */
+.table-scroll table td,
+.table-scroll table th {
+  text-align: center !important;
+}
+
 /* 表格内输入框文字也居中 */
 .t-table .t-input__inner,
 .t-table .t-input-number__input {
