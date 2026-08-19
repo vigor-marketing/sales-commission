@@ -60,17 +60,9 @@ function sanitizePlan(raw: unknown): { plan: PaymentPlanItem[]; error?: string }
   return { plan };
 }
 
-/** GET /api/contracts — 返回所有合同（含主数据） */
-contractsRouter.get('/', (_req, res) => {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT id, contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
-              sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, created_at, updated_at
-       FROM contracts ORDER BY updated_at DESC`
-    )
-    .all() as Array<Record<string, unknown>>;
-  const list = rows.map((r) => ({
+/** 合同行 → 前端对象 */
+function mapContractRow(r: Record<string, unknown>) {
+  return {
     id: r.id,
     contractNo: r.contract_no,
     customerName: r.customer_name,
@@ -85,8 +77,41 @@ contractsRouter.get('/', (_req, res) => {
     note: r.note,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
-  }));
-  res.json({ data: list });
+  };
+}
+
+/** GET /api/contracts?page=&pageSize=&search= — 分页+搜索；无分页参数时返回全量（向后兼容） */
+contractsRouter.get('/', (req, res) => {
+  const db = getDb();
+  const pageRaw = Number(req.query.page);
+  const pageSizeRaw = Number(req.query.pageSize);
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const paginated = Number.isInteger(pageRaw) && pageRaw > 0 && Number.isInteger(pageSizeRaw) && pageSizeRaw > 0;
+
+  const where = search ? ' WHERE contract_no LIKE ? OR customer_name LIKE ?' : '';
+  const params: unknown[] = search ? [`%${search}%`, `%${search}%`] : [];
+
+  if (paginated) {
+    const total = (db.prepare(`SELECT COUNT(*) AS c FROM contracts${where}`).get(...params) as { c: number }).c;
+    const rows = db
+      .prepare(
+        `SELECT id, contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
+                sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, created_at, updated_at
+         FROM contracts${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`
+      )
+      .all(...params, pageSizeRaw, (pageRaw - 1) * pageSizeRaw) as Array<Record<string, unknown>>;
+    res.json({ data: { list: rows.map(mapContractRow), total } });
+    return;
+  }
+
+  const rows = db
+    .prepare(
+      `SELECT id, contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
+              sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, created_at, updated_at
+       FROM contracts${where} ORDER BY updated_at DESC`
+    )
+    .all(...params) as Array<Record<string, unknown>>;
+  res.json({ data: rows.map(mapContractRow) });
 });
 
 /** GET /api/contracts/:contractNo — 返回单个合同 */

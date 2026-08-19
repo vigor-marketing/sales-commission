@@ -4,6 +4,7 @@ import { Layout, Menu } from 'tdesign-react';
 import { CalculatorIcon, ChartBarIcon, EditIcon, FileIcon, SettingIcon } from 'tdesign-icons-react';
 import ContractsPage from './pages/ContractsPage';
 import ContractsManagePage from './pages/ContractsManagePage';
+import ContractEditPage from './pages/ContractEditPage';
 import CalculatorPage from './pages/CalculatorPage';
 import PaymentsPage from './pages/PaymentsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -31,6 +32,7 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [active, setActive] = useState<string>(() => {
+    if (location.pathname.startsWith('/contract-edit')) return '/contracts-manage';
     if (location.pathname.startsWith('/contracts-manage')) return '/contracts-manage';
     if (location.pathname.startsWith('/contracts')) return '/contracts';
     if (location.pathname.startsWith('/calculate')) return '/calculate';
@@ -139,6 +141,7 @@ export default function App() {
               <Route path="/" element={<Navigate to="/contracts" replace />} />
               <Route path="/contracts" element={<ContractsPage />} />
               <Route path="/contracts-manage" element={<ContractsManagePage />} />
+              <Route path="/contract-edit/:contractNo" element={<ContractEditPage />} />
               <Route path="/calculate" element={<CalculatorPage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/contract-detail/:contractNo" element={<ContractDetailPage />} />

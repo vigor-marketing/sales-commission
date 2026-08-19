@@ -1,30 +1,12 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Table, Button, Popconfirm, MessagePlugin } from 'tdesign-react';
-import type { Contract, Settings, FeeName, HistoryRecord } from '../types';
-import { getContracts, upsertContract, deleteContract } from '../api/contracts';
-import { getFeeNames } from '../api/feeNames';
+import { useEffect, useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Table, Button, Input, MessagePlugin } from 'tdesign-react';
+import type { Contract, Settings, HistoryRecord } from '../types';
+import { getContracts, getContractsPage } from '../api/contracts';
 import { getSettings } from '../api/settings';
-import { getCommissionPersons } from '../api/commissions';
 import { getHistory } from '../api/history';
 import { fmtMoney } from '../utils/format';
 import { exportContractsCSV } from '../utils/export';
-import ContractForm from '../components/contracts/ContractForm';
-
-function emptyContract(): Omit<Contract, 'id' | 'createdAt' | 'updatedAt'> {
-  return {
-    contractNo: '',
-    customerName: '',
-    templateId: '',
-    salesCurrency: 'USD',
-    salesAmountOrig: 0,
-    salesRate: 7.2,
-    salesFees: [],
-    paymentPlan: [],
-    positionPersons: {},
-    totalPlanCount: 1,
-  };
-}
 
 /** 每个合同的关联情况（从计算历史聚合） */
 interface ContractStatus {
@@ -36,129 +18,100 @@ interface ContractStatus {
   paidRatio: number;
 }
 
-/** 合同管理页：合同列表（含收款进度/提成情况）+ 修改（保存后同步到其他部分） */
+const PAGE_SIZE = 20;
+
+/** 合同管理页：合同列表（分页/搜索，含收款进度/提成情况）；修改在独立编辑页 */
 export default function ContractsManagePage() {
+  const navigate = useNavigate();
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [keyword, setKeyword] = useState('');
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [feeNames, setFeeNames] = useState<FeeName[]>([]);
-  const [persons, setPersons] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [active, setActive] = useState<Omit<Contract, 'id' | 'createdAt' | 'updatedAt'>>(emptyContract());
-  const [editingNo, setEditingNo] = useState<string>('');
   // 多选导出：选中的合同 id 集合（空 = 导出全部）
   const [selectedRowKeys, setSelectedRowKeys] = useState<Array<string | number>>([]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [list, s, fns, p, h] = await Promise.all([
-        getContracts(),
-        getSettings(),
-        getFeeNames(),
-        getCommissionPersons(),
-        getHistory(1, 10000),
-      ]);
-      setContracts(list);
-      if (s) setSettings(s);
-      setFeeNames(fns);
-      setPersons(p);
-      setHistory(h.list);
-    } catch (e) {
-      MessagePlugin.error(e instanceof Error ? e.message : '加载合同失败');
-    } finally {
-      setLoading(false);
-    }
+  /** 元数据 + 历史（加载一次即可，分页不重拉） */
+  useEffect(() => {
+    (async () => {
+      try {
+        const [s, h] = await Promise.all([
+          getSettings(),
+          getHistory(1, 10000),
+        ]);
+        if (s) setSettings(s);
+        setHistory(h.list);
+      } catch (e) {
+        MessagePlugin.error(e instanceof Error ? e.message : '加载配置失败');
+      }
+    })();
   }, []);
 
+  /** 分页加载合同列表 */
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const personOptions = [...new Set([...persons, ...(settings?.staffList ?? [])])];
+    let cancelled = false;
+    setLoading(true);
+    getContractsPage({ page, pageSize: PAGE_SIZE, search })
+      .then((res) => {
+        if (cancelled) return;
+        setContracts(res.list);
+        setTotal(res.total);
+      })
+      .catch((e) => {
+        if (!cancelled) MessagePlugin.error(e instanceof Error ? e.message : '加载合同失败');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, search]);
 
   /** 按合同聚合历史情况 */
-  const statusMap = new Map<string, ContractStatus>();
-  for (const r of history) {
-    const key = r.contractNo;
-    const cur = statusMap.get(key) ?? { savedCount: 0, receivedCNY: 0, unreceivedCNY: 0, commissionCNY: 0, paidRatio: 0 };
-    cur.savedCount += 1;
-    const p = r.paymentPlan?.[0];
-    if (p) {
-      const amt = p.amountCNY || 0;
-      if (p.received) cur.receivedCNY += amt;
-      else cur.unreceivedCNY += amt;
-      // 累计收款比例（ratio 缺失的旧数据按金额占比近似，避免误判已收完）
-      if (p.ratio !== undefined) cur.paidRatio += p.ratio;
+  const statusMap = useMemo(() => {
+    const map = new Map<string, ContractStatus>();
+    for (const r of history) {
+      const key = r.contractNo;
+      const cur = map.get(key) ?? { savedCount: 0, receivedCNY: 0, unreceivedCNY: 0, commissionCNY: 0, paidRatio: 0 };
+      cur.savedCount += 1;
+      const p = r.paymentPlan?.[0];
+      if (p) {
+        const amt = p.amountCNY || 0;
+        if (p.received) cur.receivedCNY += amt;
+        else cur.unreceivedCNY += amt;
+        // 累计收款比例（ratio 缺失的旧数据按金额占比近似，避免误判已收完）
+        if (p.ratio !== undefined) cur.paidRatio += p.ratio;
+      }
+      cur.commissionCNY += r.commission ?? 0;
+      map.set(key, cur);
     }
-    cur.commissionCNY += r.commission ?? 0;
-    statusMap.set(key, cur);
-  }
+    return map;
+  }, [history]);
 
-  const existingContractNos = useMemo(
-    () => new Set((contracts ?? []).map((c) => c.contractNo).filter(Boolean)),
-    [contracts]
-  );
-
-  const handleSelect = (c: Contract) => {
-    setEditingNo(c.contractNo);
-    setActive({
-      contractNo: c.contractNo,
-      customerName: c.customerName,
-      templateId: c.templateId,
-      salesCurrency: c.salesCurrency,
-      salesAmountOrig: c.salesAmountOrig,
-      salesRate: c.salesRate,
-      salesFees: c.salesFees,
-      paymentPlan: c.paymentPlan,
-      positionPersons: c.positionPersons,
-      totalPlanCount: c.totalPlanCount,
-    });
+  const applySearch = () => {
+    setSearch(keyword.trim());
+    setPage(1);
+    setSelectedRowKeys([]);
   };
 
-  const handleNew = () => {
-    setEditingNo('');
-    setActive(emptyContract());
-  };
-
-  /** 保存修改：只更新合同主数据（contracts 表），计算历史快照不动 */
-  const handleSave = async () => {
-    if (!active.contractNo.trim()) {
-      MessagePlugin.warning('请输入合同号');
-      return;
-    }
-    if (!active.customerName.trim()) {
-      MessagePlugin.warning('请输入销售姓名');
-      return;
-    }
-    if (active.salesAmountOrig < 0) {
-      MessagePlugin.warning('业绩金额必须 ≥ 0');
-      return;
-    }
-    setSaving(true);
+  const handleExport = async () => {
+    if (contracts.length === 0) return;
     try {
-      // 修改模式：携带原合同号，后端允许更新自身（合同号唯一性由后端校验）
-      const saved = await upsertContract({ ...active, originalContractNo: editingNo });
-      MessagePlugin.success(`已更新合同 ${saved.contractNo}，已同步到提成计算/统计`);
-      setEditingNo(saved.contractNo);
-      await load();
+      // 全量拉取（分页只展示当前页，导出需全部合同）
+      const all = await getContracts();
+      const names: Record<string, string> = {};
+      for (const t of settings?.templates ?? []) names[t.id] = t.name;
+      const selected =
+        selectedRowKeys.length > 0
+          ? all.filter((c) => selectedRowKeys.includes(c.id))
+          : all;
+      exportContractsCSV(selected, names);
     } catch (e) {
-      MessagePlugin.error(e instanceof Error ? e.message : '保存失败');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!editingNo) return;
-    try {
-      await deleteContract(editingNo);
-      MessagePlugin.success(`已删除合同 ${editingNo}`);
-      handleNew();
-      await load();
-    } catch (e) {
-      MessagePlugin.error(e instanceof Error ? e.message : '删除失败');
+      MessagePlugin.error(e instanceof Error ? e.message : '导出失败');
     }
   };
 
@@ -225,7 +178,14 @@ export default function ContractsManagePage() {
     },
     {
       colKey: 'op', title: '操作', width: 80, cell: ({ row }: { row: Contract }) => (
-        <Button size="small" variant="text" theme="primary" onClick={() => handleSelect(row)}>修改</Button>
+        <Button
+          size="small"
+          variant="text"
+          theme="primary"
+          onClick={() => navigate(`/contract-edit/${encodeURIComponent(row.contractNo)}`)}
+        >
+          修改
+        </Button>
       ),
     },
   ];
@@ -236,33 +196,33 @@ export default function ContractsManagePage() {
         <div>
           <h2 className="page-title">合同管理</h2>
           <div className="page-subtitle">
-            合同列表与收款进度总览；修改合同后自动同步到提成计算 / 统计（已保存的计算历史保持原快照）
+            合同列表与收款进度总览；点「修改」进入独立编辑页，修改后自动同步到提成计算 / 统计（已保存的计算历史保持原快照）
           </div>
         </div>
       </div>
 
-      {/* 合同列表（含关联情况） */}
+      {/* 合同列表（分页 + 搜索） */}
       <div className="section-card">
         <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span>合同列表（{contracts.length}）</span>
+          <span>合同列表（共 {total} 个）</span>
           <span style={{ fontSize: 12, color: '#9aa3b5' }}>
             {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 个合同` : '勾选后可导出所选合同明细'}
           </span>
+          <Input
+            value={keyword}
+            onChange={(v) => setKeyword(String(v))}
+            placeholder="搜索合同号 / 销售姓名"
+            style={{ width: 200 }}
+            clearable
+            onEnter={applySearch}
+          />
+          <Button variant="outline" size="small" onClick={applySearch}>搜索</Button>
           <span style={{ flex: 1 }} />
           <Button
             size="small"
             variant="outline"
             disabled={contracts.length === 0}
-            onClick={() => {
-              const names: Record<string, string> = {};
-              for (const t of settings?.templates ?? []) names[t.id] = t.name;
-              // 勾选导出所选；未勾选导出全部（均为合同明细，13 列全字段）
-              const selected =
-                selectedRowKeys.length > 0
-                  ? contracts.filter((c) => selectedRowKeys.includes(c.id))
-                  : contracts;
-              exportContractsCSV(selected, names);
-            }}
+            onClick={handleExport}
           >
             {selectedRowKeys.length > 0 ? `导出所选合同明细（${selectedRowKeys.length}）` : '导出全部合同明细'}
           </Button>
@@ -281,44 +241,9 @@ export default function ContractsManagePage() {
           empty={'暂无合同，请先到「合同录入」页创建'}
           selectedRowKeys={selectedRowKeys}
           onSelectChange={(keys) => setSelectedRowKeys(keys as Array<string | number>)}
+          pagination={{ current: page, pageSize: PAGE_SIZE, total, showJumper: true }}
+          onPageChange={(pageInfo) => setPage(pageInfo.current)}
         />
-      </div>
-
-      {/* 修改合同 */}
-      <div className="section-card">
-        <div className="section-title">
-          <span>{editingNo ? `修改合同：${editingNo}` : '选择合同进行修改'}</span>
-          {editingNo && <Button size="small" variant="text" onClick={handleNew}>取消修改</Button>}
-        </div>
-        {editingNo ? (
-          <>
-            <ContractForm
-              active={active}
-              onChange={setActive}
-              settings={settings}
-              feeNames={feeNames}
-              onFeeNamesChange={setFeeNames}
-              personOptions={personOptions}
-              editing
-              existingContractNos={existingContractNos}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
-              <Button theme="primary" loading={saving} onClick={handleSave} style={{ minWidth: 160 }}>
-                保存修改（同步到其他部分）
-              </Button>
-              <Popconfirm content="确认删除该合同？" onConfirm={handleDelete}>
-                <Button variant="outline" theme="danger">删除该合同</Button>
-              </Popconfirm>
-              <span style={{ fontSize: 12, color: '#9aa3b5', whiteSpace: 'nowrap' }}>
-                修改后提成计算页带出的合同信息将同步更新；已保存的历史记录不重算
-              </span>
-            </div>
-          </>
-        ) : (
-          <div style={{ color: '#9aa3b5', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
-            点击上方列表中的「修改」按钮编辑合同
-          </div>
-        )}
       </div>
     </div>
   );
