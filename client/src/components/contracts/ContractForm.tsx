@@ -59,6 +59,15 @@ export default function ContractForm({
   };
   const activeTemplate: Template | undefined =
     settings?.templates.find((t) => t.id === active.templateId) ?? settings?.templates[0];
+
+  // 表格类型自动带出：未显式选择时默认首个模板（与下拉框展示一致，避免保存空 templateId）
+  useEffect(() => {
+    if (!active.templateId && settings?.templates?.length) {
+      onChange({ ...active, templateId: settings.templates[0].id });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
+
   // 销售姓名候选：仅销售类岗位（销售人员/销售主管/项目管理人员/销售助理）可录入合同
   const salesOptions = salesPersonOptions(settings?.personPositions, personOptions);
 

@@ -166,6 +166,13 @@ export default function ContractsManagePage() {
     { colKey: 'row-select', type: 'multiple' as const, width: 46 },
     { colKey: 'contractNo', title: '合同号', width: 130, cell: ({ row }: { row: Contract }) => <Link to={`/contract-detail/${encodeURIComponent(row.contractNo)}`} style={{ color: '#0052d9', fontWeight: 600 }}>{row.contractNo}</Link> },
     { colKey: 'customerName', title: '销售姓名', width: 90, cell: ({ row }: { row: Contract }) => row.customerName },
+    {
+      colKey: 'template', title: '表格类型', width: 130,
+      cell: ({ row }: { row: Contract }) => {
+        const t = settings?.templates.find((x) => x.id === row.templateId);
+        return t ? t.name : row.templateId ? '未知模板' : '—';
+      },
+    },
     { colKey: 'salesAmount', title: '业绩', width: 120, align: 'right' as const, cell: ({ row }: { row: Contract }) => `${row.salesAmountOrig.toLocaleString()} ${row.salesCurrency}` },
     { colKey: 'fees', title: '费用（¥）', width: 100, align: 'right' as const, cell: ({ row }: { row: Contract }) => fmtMoney(row.salesFees.reduce((s, f) => s + (f.amountCNY || 0), 0)) },
     {
