@@ -3,7 +3,8 @@ import { readSettings, saveSettings, defaultTemplates } from '../db/seed.js';
 import { validateTemplate } from '../utils/validation.js';
 import { scheduleBackup } from '../services/backup.js';
 import { getDb } from '../db/database.js';
-import type { Settings, Template, Currency } from '../types.js';
+import { recomputeContractHistory } from './contracts.js';
+import type { Settings, Template, Currency, SalesFee, PaymentPlanItem } from '../types.js';
 
 export const settingsRouter = Router();
 
@@ -62,15 +63,15 @@ settingsRouter.put('/', (req, res) => {
 
   const settings: Settings = { templates, staffList, personPositions };
 
-  // 岗位重命名/删除 → 同步到已录入合同（position_persons 键名保持一致）
+  const warnings = settings.templates.flatMap((t) => validateTemplate(t));
+  const oldSettings = readSettings();
+  saveSettings(settings);
+  // 岗位重命名/删除 → 同步已录入合同的 position_persons 键名及其历史明细（级联失败不阻断设置保存）
   try {
-    cascadePositionChanges(readSettings(), settings);
+    cascadePositionChanges(oldSettings, settings);
   } catch {
     // 级联失败不阻断设置保存
   }
-
-  const warnings = settings.templates.flatMap((t) => validateTemplate(t));
-  saveSettings(settings);
   // 数据变更 → 触发云端备份
   scheduleBackup();
   res.json({ data: readSettings(), warnings });
@@ -128,7 +129,29 @@ function cascadePositionChanges(oldSettings: Settings, newSettings: Settings): v
           changed = true;
         }
       }
-      if (changed) update.run(JSON.stringify(pp), row.id);
+      if (changed) {
+        update.run(JSON.stringify(pp), row.id);
+        // 合同表被更新 → 同步该合同的历史明细（岗位分配/模板快照/提成随合同重算）
+        const c = db
+          .prepare(
+            `SELECT contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
+                    sales_fees_json, payment_plan_json, position_persons_json, total_plan_count
+             FROM contracts WHERE id = ?`
+          )
+          .get(row.id) as Record<string, unknown>;
+        recomputeContractHistory(db, {
+          contractNo: c.contract_no as string,
+          customerName: c.customer_name as string,
+          templateId: c.template_id as string,
+          salesCurrency: c.sales_currency as Currency,
+          salesAmountOrig: c.sales_amount_orig as number,
+          rate: c.sales_rate as number,
+          fees: (JSON.parse(c.sales_fees_json as string) as SalesFee[]) || [],
+          positionPersons: (JSON.parse(c.position_persons_json as string) as Record<string, string>) || {},
+          plan: (JSON.parse(c.payment_plan_json as string) as PaymentPlanItem[]) || [],
+          totalPlanCount: c.total_plan_count as number,
+        });
+      }
     }
   }
 }

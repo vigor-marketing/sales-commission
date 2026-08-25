@@ -83,7 +83,7 @@ function mapContractRow(r: Record<string, unknown>) {
 }
 
 /** 合同修改后重算该合同已保存的历史记录（明细/统计随合同主数据同步：金额、比例、提成、岗位分配等） */
-function recomputeContractHistory(
+export function recomputeContractHistory(
   db: ReturnType<typeof getDb>,
   c: {
     contractNo: string;
