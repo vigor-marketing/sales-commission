@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { getDb } from '../db/database.js';
 import { scheduleBackup } from '../services/backup.js';
+import { readSettings, getTemplate } from '../db/seed.js';
+import { calculateCommission } from '../services/calculator.js';
 import type { Currency, SalesFee, PaymentPlanItem } from '../types.js';
 
 export const contractsRouter = Router();
@@ -78,6 +80,76 @@ function mapContractRow(r: Record<string, unknown>) {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
+}
+
+/** 合同修改后重算该合同已保存的历史记录（提成明细/统计随合同主数据同步；已收金额保持原记录） */
+function recomputeContractHistory(
+  db: ReturnType<typeof getDb>,
+  c: {
+    contractNo: string;
+    customerName: string;
+    templateId: string;
+    salesCurrency: Currency;
+    salesAmountOrig: number;
+    rate: number;
+    fees: SalesFee[];
+    positionPersons: Record<string, string>;
+  }
+): void {
+  const salesAmount = Math.round(c.salesAmountOrig * c.rate * 100) / 100;
+  const salesCost = Math.round(c.fees.reduce((s, f) => s + (f.amountCNY || 0), 0) * 100) / 100;
+  const settings = readSettings();
+  const template = getTemplate(settings, c.templateId);
+  const rows = db
+    .prepare(
+      `SELECT id, payment_plan_json, plan_index, total_plan_count FROM calculation_history WHERE contract_no = ?`
+    )
+    .all(c.contractNo) as Array<{
+    id: number;
+    payment_plan_json: string;
+    plan_index: number;
+    total_plan_count: number;
+  }>;
+  const upd = db.prepare(
+    `UPDATE calculation_history SET
+       customer_name = ?, position_persons_json = ?, plan_index = ?, total_plan_count = ?,
+       contract_total_commission = ?, commission = ?, sales_amount = ?, sales_cost = ?, base_amount = ?, total_commission = ?,
+       settings_snapshot = ?, result_json = ?
+     WHERE id = ?`
+  );
+  for (const r of rows) {
+    let ratio = 1;
+    try {
+      const p = JSON.parse(r.payment_plan_json) as PaymentPlanItem[];
+      ratio = p[0]?.ratio ?? 1;
+    } catch {
+      ratio = 1;
+    }
+    const result = calculateCommission({ salesAmount, salesCost }, template);
+    result.positionPersons = c.positionPersons;
+    result.salesAmountOrig = Math.round(c.salesAmountOrig * 100) / 100;
+    result.salesCurrency = c.salesCurrency;
+    result.salesRate = c.salesCurrency === 'CNY' ? 1 : c.rate;
+    result.salesFees = c.fees;
+    result.planIndex = r.plan_index;
+    result.totalPlanCount = r.total_plan_count;
+    result.commission = Math.round(result.totalCommission * ratio * 100) / 100;
+    upd.run(
+      c.customerName,
+      JSON.stringify(c.positionPersons),
+      r.plan_index,
+      r.total_plan_count,
+      result.totalCommission,
+      result.commission,
+      result.salesAmount,
+      result.salesCost,
+      result.baseAmount,
+      result.totalCommission,
+      JSON.stringify(result.settingsSnapshot),
+      JSON.stringify(result),
+      r.id
+    );
+  }
 }
 
 /** GET /api/contracts?page=&pageSize=&search= — 分页+搜索；无分页参数时返回全量（向后兼容） */
@@ -255,8 +327,20 @@ contractsRouter.put('/', (req, res) => {
         note,
         contractNo
       );
+      // 合同修改后：重算该合同已保存的历史记录（提成明细/统计随合同主数据同步）
+      recomputeContractHistory(db, {
+        contractNo,
+        customerName,
+        templateId,
+        salesCurrency,
+        salesAmountOrig,
+        rate,
+        fees,
+        positionPersons,
+      });
     });
     tx();
+    scheduleBackup();
   } else {
     // ---- 新建模式：合同号不得已存在 ----
     const dup = db.prepare('SELECT id FROM contracts WHERE contract_no = ?').get(contractNo);
