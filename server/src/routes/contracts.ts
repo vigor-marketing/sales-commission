@@ -82,7 +82,7 @@ function mapContractRow(r: Record<string, unknown>) {
   };
 }
 
-/** 合同修改后重算该合同已保存的历史记录（提成明细/统计随合同主数据同步；已收金额保持原记录） */
+/** 合同修改后重算该合同已保存的历史记录（明细/统计随合同主数据同步：金额、比例、提成、岗位分配等） */
 function recomputeContractHistory(
   db: ReturnType<typeof getDb>,
   c: {
@@ -94,6 +94,8 @@ function recomputeContractHistory(
     rate: number;
     fees: SalesFee[];
     positionPersons: Record<string, string>;
+    plan: PaymentPlanItem[];
+    totalPlanCount: number;
   }
 ): void {
   const salesAmount = Math.round(c.salesAmountOrig * c.rate * 100) / 100;
@@ -112,19 +114,48 @@ function recomputeContractHistory(
   }>;
   const upd = db.prepare(
     `UPDATE calculation_history SET
-       customer_name = ?, position_persons_json = ?, plan_index = ?, total_plan_count = ?,
+       customer_name = ?, payment_plan_json = ?, position_persons_json = ?, plan_index = ?, total_plan_count = ?,
        contract_total_commission = ?, commission = ?, sales_amount = ?, sales_cost = ?, base_amount = ?, total_commission = ?,
        settings_snapshot = ?, result_json = ?
      WHERE id = ?`
   );
   for (const r of rows) {
-    let ratio = 1;
+    // 原记录信息（保留已收状态与备注）
+    let origReceived = true;
+    let origNote = '';
     try {
-      const p = JSON.parse(r.payment_plan_json) as PaymentPlanItem[];
-      ratio = p[0]?.ratio ?? 1;
+      const orig = JSON.parse(r.payment_plan_json) as PaymentPlanItem[];
+      origReceived = orig[0]?.received === true;
+      origNote = orig[0]?.note ?? '';
     } catch {
-      ratio = 1;
+      // 忽略
     }
+    // 计划内笔次：收款记录同步为新计划的对应笔（金额/比例/人民币）；追加笔（超出计划）保持原记录
+    let payment: PaymentPlanItem;
+    let ratio = 1;
+    const planItem = c.plan[r.plan_index - 1];
+    if (planItem) {
+      payment = {
+        month: planItem.month,
+        currency: planItem.currency,
+        amount: Math.round((planItem.amount ?? 0) * 100) / 100,
+        rate: planItem.rate ?? (c.salesCurrency === 'CNY' ? 1 : c.rate),
+        amountCNY: planItem.amountCNY ?? 0,
+        received: origReceived,
+        ratio: planItem.ratio,
+        note: origNote || (planItem.note ?? ''),
+      };
+      ratio = planItem.ratio ?? 1;
+    } else {
+      try {
+        const orig = JSON.parse(r.payment_plan_json) as PaymentPlanItem[];
+        payment = orig[0] ?? { month: '', currency: c.salesCurrency, amount: 0, rate: c.rate, amountCNY: 0, received: true };
+        ratio = orig[0]?.ratio ?? 1;
+      } catch {
+        payment = { month: '', currency: c.salesCurrency, amount: 0, rate: c.rate, amountCNY: 0, received: true };
+      }
+    }
+    const totalPlanCount = Math.max(r.plan_index, c.totalPlanCount);
     const result = calculateCommission({ salesAmount, salesCost }, template);
     result.positionPersons = c.positionPersons;
     result.salesAmountOrig = Math.round(c.salesAmountOrig * 100) / 100;
@@ -132,13 +163,14 @@ function recomputeContractHistory(
     result.salesRate = c.salesCurrency === 'CNY' ? 1 : c.rate;
     result.salesFees = c.fees;
     result.planIndex = r.plan_index;
-    result.totalPlanCount = r.total_plan_count;
+    result.totalPlanCount = totalPlanCount;
     result.commission = Math.round(result.totalCommission * ratio * 100) / 100;
     upd.run(
       c.customerName,
+      JSON.stringify([payment]),
       JSON.stringify(c.positionPersons),
       r.plan_index,
-      r.total_plan_count,
+      totalPlanCount,
       result.totalCommission,
       result.commission,
       result.salesAmount,
@@ -337,6 +369,8 @@ contractsRouter.put('/', (req, res) => {
         rate,
         fees,
         positionPersons,
+        plan,
+        totalPlanCount,
       });
     });
     tx();
