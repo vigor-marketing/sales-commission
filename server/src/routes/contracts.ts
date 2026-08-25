@@ -209,51 +209,80 @@ contractsRouter.put('/', (req, res) => {
   }
 
   const db = getDb();
-  // 合同号唯一性：新建（未传 originalContractNo）时合同号必须不存在；修改时目标合同号也不得与其它合同冲突
+  // 合同号唯一性：新建（未传 originalContractNo）时合同号必须不存在；修改（改名）时目标合同号不得与其它合同冲突
   const originalContractNo = typeof req.body?.originalContractNo === 'string' ? req.body.originalContractNo.trim() : '';
-  const dup = db.prepare('SELECT id FROM contracts WHERE contract_no = ?').get(contractNo) as { id: number } | undefined;
-  if (dup) {
-    if (!originalContractNo) {
-      res.status(409).json({ error: `合同号「${contractNo}」已存在，禁止新建（合同号必须唯一）` });
+
+  if (originalContractNo) {
+    // ---- 修改模式 ----
+    const oldRow = db
+      .prepare('SELECT id FROM contracts WHERE contract_no = ?')
+      .get(originalContractNo) as { id: number } | undefined;
+    if (!oldRow) {
+      res.status(404).json({ error: `原合同「${originalContractNo}」不存在` });
       return;
     }
-    if (originalContractNo !== contractNo) {
+    const dup = db
+      .prepare('SELECT id FROM contracts WHERE contract_no = ?')
+      .get(contractNo) as { id: number } | undefined;
+    if (dup && dup.id !== oldRow.id) {
       res.status(409).json({ error: `合同号「${contractNo}」已存在，禁止修改为该合同号（合同号必须唯一）` });
       return;
     }
+    // 合同号改名：同步历史记录 / 平台快照中的 contract_no，避免关联信息挂在旧合同号上
+    const rename = contractNo !== originalContractNo;
+    const tx = db.transaction(() => {
+      if (rename) {
+        db.prepare('UPDATE contracts SET contract_no = ? WHERE contract_no = ?').run(contractNo, originalContractNo);
+        db.prepare('UPDATE calculation_history SET contract_no = ? WHERE contract_no = ?').run(contractNo, originalContractNo);
+        db.prepare('UPDATE platform_contract_snapshots SET contract_no = ? WHERE contract_no = ?').run(contractNo, originalContractNo);
+      }
+      db.prepare(
+        `UPDATE contracts SET
+           customer_name = ?, template_id = ?, sales_currency = ?, sales_amount_orig = ?, sales_rate = ?,
+           sales_fees_json = ?, payment_plan_json = ?, position_persons_json = ?, total_plan_count = ?, note = ?,
+           updated_at = datetime('now','localtime')
+         WHERE contract_no = ?`
+      ).run(
+        customerName,
+        templateId,
+        salesCurrency,
+        salesAmountOrig,
+        rate,
+        JSON.stringify(fees),
+        JSON.stringify(plan),
+        JSON.stringify(positionPersons),
+        totalPlanCount,
+        note,
+        contractNo
+      );
+    });
+    tx();
+  } else {
+    // ---- 新建模式：合同号不得已存在 ----
+    const dup = db.prepare('SELECT id FROM contracts WHERE contract_no = ?').get(contractNo);
+    if (dup) {
+      res.status(409).json({ error: `合同号「${contractNo}」已存在，禁止新建（合同号必须唯一）` });
+      return;
+    }
+    db.prepare(
+      `INSERT INTO contracts
+        (contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
+         sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))`
+    ).run(
+      contractNo,
+      customerName,
+      templateId,
+      salesCurrency,
+      salesAmountOrig,
+      rate,
+      JSON.stringify(fees),
+      JSON.stringify(plan),
+      JSON.stringify(positionPersons),
+      totalPlanCount,
+      note
+    );
   }
-
-  // upsert：contract_no UNIQUE（此处已通过唯一性校验，仅用于同合同号覆盖更新 = 修改自身）
-  db.prepare(
-    `INSERT INTO contracts
-      (contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
-       sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))
-     ON CONFLICT(contract_no) DO UPDATE SET
-       customer_name = excluded.customer_name,
-       template_id = excluded.template_id,
-       sales_currency = excluded.sales_currency,
-       sales_amount_orig = excluded.sales_amount_orig,
-       sales_rate = excluded.sales_rate,
-       sales_fees_json = excluded.sales_fees_json,
-       payment_plan_json = excluded.payment_plan_json,
-       position_persons_json = excluded.position_persons_json,
-       total_plan_count = excluded.total_plan_count,
-       note = excluded.note,
-       updated_at = datetime('now','localtime')`
-  ).run(
-    contractNo,
-    customerName,
-    templateId,
-    salesCurrency,
-    salesAmountOrig,
-    rate,
-    JSON.stringify(fees),
-    JSON.stringify(plan),
-    JSON.stringify(positionPersons),
-    totalPlanCount,
-    note
-  );
 
   const row = db.prepare(`SELECT id, contract_no, customer_name, template_id, sales_currency, sales_amount_orig, sales_rate,
               sales_fees_json, payment_plan_json, position_persons_json, total_plan_count, note, created_at, updated_at
