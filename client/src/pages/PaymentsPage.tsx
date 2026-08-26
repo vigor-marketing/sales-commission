@@ -455,6 +455,7 @@ export default function PaymentsPage() {
                 flexWrap: 'wrap',
               }}
             >
+              <span style={{ fontWeight: 700, color: '#1a1a1a', whiteSpace: 'nowrap' }}>合计</span>
               <span>
                 当月总计（{currentMonth}）：
                 <b style={{ color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(currentMonthTotal)}</b>
@@ -462,6 +463,9 @@ export default function PaymentsPage() {
               <span>
                 年度总计（{year}）：
                 <b style={{ color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(yearTotal)}</b>
+              </span>
+              <span style={{ color: '#9aa3b5', fontSize: 12 }}>
+                提成按实际收汇金额（原币金额×实际结汇汇率）×系数计算；合计随年份/岗位/姓名筛选联动，不受月份筛选影响
               </span>
             </div>
           }
