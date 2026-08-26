@@ -36,6 +36,8 @@ interface MonthRow {
   contractCount: number;
   /** 涉及人员数 */
   people: number;
+  /** 收款笔数（按合同×笔次去重） */
+  planCount: number;
   /** 提成合计（¥） */
   total: number;
 }
@@ -208,20 +210,22 @@ export default function PaymentsPage() {
     });
   }, [allRows, year, month, customerName, position]);
 
-  // 按月聚合（月份 | 合同数 | 涉及人员 | 提成合计）
+  // 按月聚合（月份 | 合同数 | 笔数 | 涉及人员 | 提成合计）
   const monthRows: MonthRow[] = useMemo(() => {
-    const map = new Map<string, { contracts: Set<string>; people: Set<string>; total: number }>();
+    const map = new Map<string, { contracts: Set<string>; people: Set<string>; plans: Set<string>; total: number }>();
     for (const r of filtered) {
       const m = r.month;
-      const e = map.get(m) ?? { contracts: new Set<string>(), people: new Set<string>(), total: 0 };
+      const e =
+        map.get(m) ?? { contracts: new Set<string>(), people: new Set<string>(), plans: new Set<string>(), total: 0 };
       e.contracts.add(r.contractNo);
       e.people.add(r.person);
+      e.plans.add(`${r.contractNo}|${r.planIndex}`);
       e.total = Math.round((e.total + r.amount) * 100) / 100;
       map.set(m, e);
     }
     return [...map.entries()]
       .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([m, v]) => ({ month: m, contractCount: v.contracts.size, people: v.people.size, total: v.total }));
+      .map(([m, v]) => ({ month: m, contractCount: v.contracts.size, people: v.people.size, planCount: v.plans.size, total: v.total }));
   }, [filtered]);
 
   const totalAmount = Math.round(filtered.reduce((s, r) => s + r.amount, 0) * 100) / 100;
@@ -373,6 +377,7 @@ export default function PaymentsPage() {
   const monthColumns = [
     { colKey: 'month', title: '月份', width: 110, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => <span style={{ fontWeight: 600 }}>{row.month}</span> },
     { colKey: 'contractCount', title: '合同数', width: 80, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => row.contractCount },
+    { colKey: 'planCount', title: '笔数', width: 70, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => row.planCount },
     { colKey: 'people', title: '涉及人员', width: 90, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => `${row.people} 人` },
     { colKey: 'total', title: '提成合计（¥）', width: 150, align: 'right' as const, cell: ({ row }: { row: MonthRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.total)}</span> },
   ];
