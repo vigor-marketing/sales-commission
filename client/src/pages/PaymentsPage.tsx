@@ -476,6 +476,13 @@ export default function PaymentsPage() {
       <div className="section-card">
         <div className="section-title">
           <span>人员按月提成汇总</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#4a5568', whiteSpace: 'nowrap' }}>
+            当月总计：
+            <b style={{ color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(currentMonthTotal)} 元</b>
+            <span style={{ margin: '0 12px', color: '#c4c9d4' }}>｜</span>
+            年度总计：
+            <b style={{ color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(yearTotal)} 元</b>
+          </span>
           <span style={{ fontSize: 12, fontWeight: 400, color: '#9aa3b5' }}>
             {customerName ? `（姓名：${customerName}）` : ''}
             {position ? `（岗位：${position}）` : ''}
