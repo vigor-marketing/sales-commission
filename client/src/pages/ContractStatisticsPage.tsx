@@ -15,13 +15,14 @@ export default function ContractStatisticsPage() {
   const { contractNo = '' } = useParams<{ contractNo: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // 来源路由：from=detail（合同明细页进入）→ 返回合同明细；其他（提成计算/直接访问）→ 返回提成计算
+  // 来源路由：from=detail（合同明细页）→ 返回合同明细；from=payments（提成统计）→ 返回提成统计；其他 → 返回提成计算
   const from = searchParams.get('from');
-  const backTarget = (no: string) =>
-    from === 'detail'
-      ? '/contract-detail/' + encodeURIComponent(no)
-      : '/calculate?contract=' + encodeURIComponent(no);
-  const backLabel = from === 'detail' ? '← 返回合同明细' : '← 返回提成计算';
+  const backTarget = (no: string) => {
+    if (from === 'detail') return '/contract-detail/' + encodeURIComponent(no);
+    if (from === 'payments') return '/payments';
+    return '/calculate?contract=' + encodeURIComponent(no);
+  };
+  const backLabel = from === 'detail' ? '← 返回合同明细' : from === 'payments' ? '← 返回提成统计' : '← 返回提成计算';
   const [contract, setContract] = useState<Contract | null>(null);
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);

@@ -249,7 +249,7 @@ export default function PaymentsPage() {
   }, [filtered]);
 
   const contractColumns = [
-    { colKey: 'contractNo', title: '合同号', width: 140, cell: ({ row }: { row: ContractSummaryRow }) => <Link to={`/contract-statistics/${encodeURIComponent(row.contractNo)}`} style={{ color: '#0052d9', fontWeight: 600 }}>{row.contractNo || '—'}</Link> },
+    { colKey: 'contractNo', title: '合同号', width: 140, cell: ({ row }: { row: ContractSummaryRow }) => <Link to={`/contract-statistics/${encodeURIComponent(row.contractNo)}?from=payments`} style={{ color: '#0052d9', fontWeight: 600 }}>{row.contractNo || '—'}</Link> },
     { colKey: 'customerName', title: '销售姓名', width: 90, cell: ({ row }: { row: ContractSummaryRow }) => row.customerName || '—' },
     { colKey: 'templateName', title: '表格类型', width: 130, cell: ({ row }: { row: ContractSummaryRow }) => row.templateName ? <span className="tpl-tag">{row.templateName}</span> : '—' },
     { colKey: 'planCount', title: '笔数', width: 70, align: 'center' as const, cell: ({ row }: { row: ContractSummaryRow }) => row.planCount },
@@ -442,7 +442,7 @@ export default function PaymentsPage() {
                 {[...byContract.values()].map((c) => (
                   <div key={c.contractNo} className="pm-detail__contract">
                     <div className="pm-detail__contract-head">
-                      <Link to={`/contract-statistics/${encodeURIComponent(c.contractNo)}`}>{c.contractNo}</Link>
+                      <Link to={`/contract-statistics/${encodeURIComponent(c.contractNo)}?from=payments`}>{c.contractNo}</Link>
                       <span className="pm-detail__subtotal">小计 ¥{fmtMoney(c.total)}</span>
                     </div>
                     <div className="pm-detail__chips">
