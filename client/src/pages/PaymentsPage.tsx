@@ -68,6 +68,8 @@ export default function PaymentsPage() {
   const [persons, setPersons] = useState<string[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(false);
+  // 人员按月汇总展开行（人员|月份）
+  const [expandedKeys, setExpandedKeys] = useState<Array<string | number>>([]);
   const [year, setYear] = useState<string>(String(new Date().getFullYear()));
   // 默认全年（月份筛选由用户自行选择，避免把非当月收款隐藏造成困惑）
   const [month, setMonth] = useState<string>('');
@@ -281,6 +283,21 @@ export default function PaymentsPage() {
     { colKey: 'amount', title: '提成合计（¥）', width: 160, align: 'right' as const, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
   ];
 
+  // 人员×月份 → 明细（合同 × 岗位 × 提成金额），供展开行展示
+  const personMonthDetail = useMemo(() => {
+    const map = new Map<string, Array<{ contractNo: string; position: string; amount: number }>>();
+    for (const r of filtered) {
+      const key = `${r.person}|${r.month}`;
+      const arr = map.get(key) ?? [];
+      arr.push({ contractNo: r.contractNo, position: r.position, amount: r.amount });
+      map.set(key, arr);
+    }
+    for (const arr of map.values()) {
+      arr.sort((a, b) => a.contractNo.localeCompare(b.contractNo) || a.position.localeCompare(b.position, 'zh-CN'));
+    }
+    return map;
+  }, [filtered]);
+
   const monthColumns = [
     { colKey: 'month', title: '月份', width: 120, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => <span style={{ fontWeight: 600 }}>{row.month}</span> },
     { colKey: 'count', title: '笔次', width: 80, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => row.count },
@@ -398,7 +415,7 @@ export default function PaymentsPage() {
           <span style={{ fontSize: 12, fontWeight: 400, color: '#9aa3b5' }}>
             {customerName ? `（姓名：${customerName}）` : ''}
             {position ? `（岗位：${position}）` : ''}
-            {personMonthRows.length === 0 ? '当前筛选无数据' : `共 ${personMonthRows.length} 条`}
+            {personMonthRows.length === 0 ? '当前筛选无数据' : `共 ${personMonthRows.length} 条，展开查看该月涉及合同/岗位明细`}
           </span>
         </div>
         <Table
@@ -406,6 +423,48 @@ export default function PaymentsPage() {
           rowKey="id"
           data={personMonthRows}
           columns={personMonthColumns}
+          expandedRowKeys={expandedKeys}
+          onExpandChange={(keys) => setExpandedKeys(keys as Array<string | number>)}
+          expandedRow={({ row }: { row: PersonMonthRow }) => {
+            const items = personMonthDetail.get(row.id) ?? [];
+            const byContract = new Map<string, { contractNo: string; list: Array<{ position: string; amount: number }>; total: number }>();
+            for (const it of items) {
+              const e = byContract.get(it.contractNo) ?? { contractNo: it.contractNo, list: [], total: 0 };
+              e.list.push({ position: it.position, amount: it.amount });
+              e.total = Math.round((e.total + it.amount) * 100) / 100;
+              byContract.set(it.contractNo, e);
+            }
+            return (
+              <div style={{ padding: '6px 16px 12px 48px', background: '#fafbfd' }}>
+                {[...byContract.values()].map((c) => (
+                  <div key={c.contractNo} style={{ marginBottom: 8, fontSize: 13 }}>
+                    <div style={{ fontWeight: 600, color: '#4a5568', marginBottom: 3 }}>
+                      {c.contractNo}（小计 ¥{fmtMoney(c.total)}）
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 14 }}>
+                      {c.list.map((it, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            background: '#e8f0ff',
+                            color: '#0052d9',
+                            border: '1px solid #cfe0ff',
+                            borderRadius: 4,
+                            padding: '1px 8px',
+                            fontSize: 12,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {it.position} ¥{fmtMoney(it.amount)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {items.length === 0 && <span style={{ color: '#9aa3b5', fontSize: 12 }}>无明细</span>}
+              </div>
+            );
+          }}
           bordered
           hover
           stripe
