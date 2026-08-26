@@ -104,6 +104,15 @@ export default function PaymentsPage() {
     load();
   }, [load]);
 
+  // 页面重新可见时自动刷新数据（在其它标签页录入收款后切回，统计保持最新）
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [load]);
+
   /** 直接从 result.settingsSnapshot 取模板名（HistoryRecord 没有顶层 templateId 字段） */
   const tnameOf = (r: HistoryRecord): string => r.result?.settingsSnapshot?.name ?? '';
 
