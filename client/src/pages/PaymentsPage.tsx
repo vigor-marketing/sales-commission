@@ -214,6 +214,30 @@ export default function PaymentsPage() {
   const totalAmount = Math.round(filtered.reduce((s, r) => s + r.amount, 0) * 100) / 100;
   const contractCount = new Set(filtered.map((r) => r.contractNo)).size;
 
+  // 当月/年度总计（随年份/岗位/姓名筛选，不受月份筛选影响）
+  const matchPersonPosition = (r: CommissionRow) =>
+    (!customerName || r.customerName === customerName || r.person === customerName) &&
+    (!position || r.position === position);
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthTotal = useMemo(
+    () =>
+      Math.round(
+        allRows.filter((r) => r.month === currentMonth && matchPersonPosition(r)).reduce((s, r) => s + r.amount, 0) * 100
+      ) / 100,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allRows, currentMonth, customerName, position]
+  );
+  const yearTotal = useMemo(
+    () =>
+      Math.round(
+        allRows
+          .filter((r) => year && r.month.startsWith(year) && matchPersonPosition(r))
+          .reduce((s, r) => s + r.amount, 0) * 100
+      ) / 100,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allRows, year, customerName, position]
+  );
+
   // 第一级：按合同汇总（合同号 → 销售人员 + 笔数 + 涉及人数 + 提成总额）
   const contractRows = useMemo(() => {
     const map = new Map<
@@ -420,6 +444,26 @@ export default function PaymentsPage() {
           tableLayout="auto"
           empty={loading ? '加载中…' : '当前筛选无数据'}
         />
+        {/* 当月/年度总计 */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 28,
+            padding: '10px 4px 2px',
+            fontSize: 13,
+            color: '#4a5568',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span>
+            当月总计（{currentMonth}）：
+            <b style={{ color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(currentMonthTotal)}</b>
+          </span>
+          <span>
+            年度总计（{year}）：
+            <b style={{ color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(yearTotal)}</b>
+          </span>
+        </div>
       </div>
 
       {/* 人员按月提成汇总：一人一行，行内展示各月份提成，展开查看合同/岗位明细 */}
