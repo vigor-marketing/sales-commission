@@ -98,7 +98,8 @@ export default function ContractInfoCard({ contract: c, settings }: Props) {
               }}
             >
               第{i + 1}笔 {p.month} {p.currency} {fmtMoney(p.amount)}
-              {p.ratio !== undefined && `（${(p.ratio * 100).toFixed(1)}%）`} = ¥ {fmtMoney(p.amountCNY)}
+              {p.ratio !== undefined && `（${(p.ratio * 100).toFixed(1)}%）`}
+              {p.currency !== 'CNY' && p.rate ? ` × 实际结汇汇率 ${Number(p.rate).toFixed(2)}` : ''} = ¥ {fmtMoney(p.amountCNY)}
             </span>
           ))}
         </div>
