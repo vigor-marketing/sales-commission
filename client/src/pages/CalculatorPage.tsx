@@ -105,6 +105,7 @@ export default function CalculatorPage() {
             currency: p?.currency ?? 'USD',
             amount: p?.amount ?? 0,
             ratio: p?.ratio,
+            rate: p?.rate,
             received: p?.received === true,
             note: p?.note ?? '',
           };
@@ -278,6 +279,7 @@ export default function CalculatorPage() {
               currency: p?.currency ?? 'USD',
               amount: p?.amount ?? 0,
               ratio: p?.ratio,
+              rate: p?.rate,
               received: p?.received === true,
               note: p?.note ?? '',
             };

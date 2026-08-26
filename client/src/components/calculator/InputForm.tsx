@@ -12,6 +12,8 @@ interface PlanHistoryItem {
   currency: string;
   amount: number;
   ratio?: number;
+  /** 实际结汇汇率（保存时记录） */
+  rate?: number;
   received: boolean;
   note: string;
 }
@@ -99,7 +101,8 @@ export default function InputForm({
           h.month === p.month &&
           h.currency === p.currency &&
           Math.abs((h.amount ?? 0) - (p.amount ?? 0)) < 0.01;
-        return { ...p, planIndex: pi, paid };
+        // 已收：展示实际结汇汇率（保存时记录）；未收：展示计划预期汇率
+        return { ...p, planIndex: pi, paid, rate: paid ? h?.rate ?? p.rate : p.rate };
       }),
     [contractPlan, planHistory]
   );
@@ -278,7 +281,10 @@ export default function InputForm({
                     <span style={{ fontSize: 12, color: '#6b7588', whiteSpace: 'nowrap' }}>{(p.ratio * 100).toFixed(1)}%</span>
                   )}
                   {p.currency !== 'CNY' && (
-                    <span style={{ fontSize: 12, color: '#8a94a6', whiteSpace: 'nowrap' }}>预期结汇汇率 {Number(p.rate).toFixed(2)} = ¥ {fmtMoney(p.amountCNY ?? 0)}</span>
+                    <span style={{ fontSize: 12, color: '#8a94a6', whiteSpace: 'nowrap' }}>
+                      {p.paid ? `实际结汇汇率 ${Number(p.rate ?? 0).toFixed(2)}` : `预期结汇汇率 ${Number(p.rate ?? 0).toFixed(2)}`} = ¥{' '}
+                      {fmtMoney(p.amountCNY ?? 0)}
+                    </span>
                   )}
                   {p.paid ? (
                     <span
