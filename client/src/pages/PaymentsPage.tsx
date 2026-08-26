@@ -50,6 +50,17 @@ interface ContractSummaryRow {
   amount: number;
 }
 
+/** 人员 × 月份：该人员所有相关合同的提成汇总 */
+interface PersonMonthRow {
+  id: string;
+  person: string;
+  month: string;
+  /** 涉及合同数 */
+  contractCount: number;
+  /** 提成合计（¥） */
+  amount: number;
+}
+
 const SALES_POSITIONS = ['销售人员', '销售主管', '项目管理人员', '销售助理'];
 
 export default function PaymentsPage() {
@@ -241,6 +252,35 @@ export default function PaymentsPage() {
     { colKey: 'amount', title: '提成总额（¥）', width: 140, align: 'right' as const, cell: ({ row }: { row: ContractSummaryRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
   ];
 
+  // 人员 × 月份：该人员所有相关合同的提成汇总（随姓名/岗位筛选联动）
+  const personMonthRows = useMemo(() => {
+    const map = new Map<string, { person: string; month: string; contracts: Set<string>; amount: number }>();
+    for (const r of filtered) {
+      const key = `${r.person}|${r.month}`;
+      const e =
+        map.get(key) ?? { person: r.person, month: r.month, contracts: new Set<string>(), amount: 0 };
+      e.contracts.add(r.contractNo);
+      e.amount = Math.round((e.amount + r.amount) * 100) / 100;
+      map.set(key, e);
+    }
+    return [...map.values()]
+      .map((e) => ({
+        id: `${e.person}|${e.month}`,
+        person: e.person,
+        month: e.month,
+        contractCount: e.contracts.size,
+        amount: e.amount,
+      }))
+      .sort((a, b) => a.person.localeCompare(b.person, 'zh-CN') || b.month.localeCompare(a.month));
+  }, [filtered]);
+
+  const personMonthColumns = [
+    { colKey: 'person', title: '人员', width: 110, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ color: '#0052d9', fontWeight: 600 }}>{row.person}</span> },
+    { colKey: 'month', title: '月份', width: 100, align: 'center' as const, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ fontWeight: 600 }}>{row.month}</span> },
+    { colKey: 'contractCount', title: '合同数', width: 80, align: 'center' as const, cell: ({ row }: { row: PersonMonthRow }) => row.contractCount },
+    { colKey: 'amount', title: '提成合计（¥）', width: 160, align: 'right' as const, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
+  ];
+
   const monthColumns = [
     { colKey: 'month', title: '月份', width: 120, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => <span style={{ fontWeight: 600 }}>{row.month}</span> },
     { colKey: 'count', title: '笔次', width: 80, align: 'center' as const, cell: ({ row }: { row: MonthRow }) => row.count },
@@ -342,6 +382,30 @@ export default function PaymentsPage() {
           rowKey="month"
           data={monthRows}
           columns={monthColumns}
+          bordered
+          hover
+          stripe
+          size="small"
+          tableLayout="auto"
+          empty={loading ? '加载中…' : '当前筛选无数据'}
+        />
+      </div>
+
+      {/* 人员按月提成汇总：该人员所有相关合同按月份的提成合计 */}
+      <div className="section-card">
+        <div className="section-title">
+          <span>人员按月提成汇总</span>
+          <span style={{ fontSize: 12, fontWeight: 400, color: '#9aa3b5' }}>
+            {customerName ? `（姓名：${customerName}）` : ''}
+            {position ? `（岗位：${position}）` : ''}
+            {personMonthRows.length === 0 ? '当前筛选无数据' : `共 ${personMonthRows.length} 条`}
+          </span>
+        </div>
+        <Table
+          className="table-responsive"
+          rowKey="id"
+          data={personMonthRows}
+          columns={personMonthColumns}
           bordered
           hover
           stripe
