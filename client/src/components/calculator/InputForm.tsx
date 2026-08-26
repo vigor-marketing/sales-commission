@@ -388,21 +388,18 @@ export default function InputForm({
                 theme="column"
               />
             </div>
-            {payment.currency !== 'CNY' && (
-              <>
-                <span style={{ fontSize: 13, color: '#6b7588', whiteSpace: 'nowrap' }}>× 实际结汇汇率</span>
-                <InputNumber
-                  value={payment.rate}
-                  onChange={(v) => updateRate(Number(v))}
-                  placeholder="实际结汇汇率"
-                  min={0}
-                  step={0.01}
-                  style={{ width: 100 }}
-                  size="medium"
-                  theme="column"
-                />
-              </>
-            )}
+            <span style={{ fontSize: 13, color: '#6b7588', whiteSpace: 'nowrap' }}>× 实际结汇汇率</span>
+            <InputNumber
+              value={payment.currency === 'CNY' ? 1 : payment.rate}
+              onChange={(v) => updateRate(Number(v))}
+              placeholder="实际结汇汇率"
+              min={0}
+              step={0.01}
+              disabled={payment.currency === 'CNY'}
+              style={{ width: 100 }}
+              size="medium"
+              theme="column"
+            />
             <span style={{ fontSize: 13, color: '#4a5568', whiteSpace: 'nowrap' }}>=</span>
             <span
               style={{
