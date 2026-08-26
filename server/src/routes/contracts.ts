@@ -171,7 +171,16 @@ export function recomputeContractHistory(
     result.salesFees = c.fees;
     result.planIndex = r.plan_index;
     result.totalPlanCount = totalPlanCount;
-    result.commission = result.totalCommission;
+    // 特殊收款（超出计划笔数）：仅记录，不计算提成
+    if (r.plan_index > c.plan.length) {
+      result.commission = 0;
+      result.totalCommission = 0;
+      result.baseAmount = 0;
+      result.positionTotals = {};
+      result.nodeRows = [];
+    } else {
+      result.commission = result.totalCommission;
+    }
     upd.run(
       c.customerName,
       JSON.stringify([payment]),

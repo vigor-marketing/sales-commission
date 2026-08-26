@@ -176,6 +176,10 @@ calculateRouter.post('/', (req, res) => {
   let planIndex = 1;
   let totalPlanCount = 1;
   let commissionRatio = 1;
+  // 合同收款计划笔数（新模型下读取，用于判定特殊收款）
+  let planCount = Infinity;
+  // 特殊收款（超出计划笔数）：仅记录，不计算提成
+  let isSpecial = false;
 
   if (req.body?.payment !== undefined) {
     const { payment, error: payErr } = sanitizePayment(req.body.payment);
@@ -194,7 +198,6 @@ calculateRouter.post('/', (req, res) => {
     const thisRatio = payment.ratio ?? 1;
     // 追加收款（planIndex 超出合同计划笔数）不参与比例合计校验
     const db = getDb();
-    let planCount = Infinity;
     try {
       const cr = db
         .prepare(`SELECT payment_plan_json FROM contracts WHERE contract_no = ?`)
@@ -232,6 +235,12 @@ calculateRouter.post('/', (req, res) => {
       });
       return;
     }
+    // 特殊收款（超出计划笔数）必须填写备注说明原因
+    if (planIndex > planCount && !String(payment?.note ?? '').trim()) {
+      res.status(422).json({ error: '特殊收款（超出计划笔数）必须填写备注说明原因' });
+      return;
+    }
+    isSpecial = planIndex > planCount;
   } else {
     // 旧模型：数组整体
     const { plan: p, error } = sanitizePlan(req.body?.paymentPlan);
@@ -283,6 +292,15 @@ calculateRouter.post('/', (req, res) => {
   result.commission = isPaymentBased
     ? result.totalCommission
     : Math.round(result.totalCommission * commissionRatio * 100) / 100;
+
+  // 特殊收款（超出计划笔数）：仅记录收款，不计算提成
+  if (isSpecial) {
+    result.commission = 0;
+    result.totalCommission = 0;
+    result.baseAmount = 0;
+    result.positionTotals = {};
+    result.nodeRows = [];
+  }
 
   // ---- 入库（同合同同笔次 = 覆盖更新，先删旧记录再插入）----
   const db = getDb();

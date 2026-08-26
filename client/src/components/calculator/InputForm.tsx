@@ -338,6 +338,22 @@ export default function InputForm({
             <span style={{ fontSize: 12, color: '#8a94a6', minWidth: 44, whiteSpace: 'nowrap' }}>
               第{planIndex}笔
             </span>
+            {planIndex > totalPlanCount && (
+              <span
+                style={{
+                  background: '#fff6e8',
+                  color: '#e37318',
+                  border: '1px solid #ffe1b8',
+                  borderRadius: 9999,
+                  padding: '2px 10px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                特殊收款
+              </span>
+            )}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
               <Input
                 value={payment.ratio !== undefined ? String(Math.round(payment.ratio * 10000) / 100) : ''}
@@ -413,6 +429,20 @@ export default function InputForm({
             >
               ¥ {fmtMoney(payCNY)}
             </span>
+            {planIndex > totalPlanCount && (
+              <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                <span style={{ fontSize: 12, color: '#e37318', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  备注（特殊收款原因，必填）
+                </span>
+                <Input
+                  value={payment.note ?? ''}
+                  onChange={(v) => updatePayment({ note: String(v) })}
+                  placeholder="请填写特殊收款原因，例如：客户提前/追加付款、汇率异常等"
+                  style={{ flex: 1, minWidth: 260 }}
+                  size="medium"
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ color: '#9aa3b5', fontSize: 13, padding: '10px 0' }}>
