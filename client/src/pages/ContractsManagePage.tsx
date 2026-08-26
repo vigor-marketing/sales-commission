@@ -71,10 +71,12 @@ export default function ContractsManagePage() {
     };
   }, [page, search]);
 
-  /** 按合同聚合历史情况 */
+  /** 按合同聚合历史情况（追加款/特殊收款仅记录，不参与进度与提成统计） */
   const statusMap = useMemo(() => {
     const map = new Map<string, ContractStatus>();
     for (const r of history) {
+      // 追加款（超出计划笔数）：仅记录在明细，不参与收款进度/已收金额/提成合计
+      if ((r.planIndex ?? 1) > (r.totalPlanCount ?? 1)) continue;
       const key = r.contractNo;
       const cur = map.get(key) ?? { savedCount: 0, receivedCNY: 0, unreceivedCNY: 0, commissionCNY: 0, paidRatio: 0 };
       cur.savedCount += 1;
