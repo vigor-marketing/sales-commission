@@ -80,7 +80,6 @@ export default function ContractStatisticsPage() {
   }
 
   const sumCommission = records.reduce((s, r) => s + (r.commission ?? 0), 0);
-  const contractTotalCommission = records[0]?.contractTotalCommission ?? records[0]?.totalCommission ?? 0;
   const personCount = new Set(
     records.flatMap((r) =>
       Object.values(r.result?.positionPersons ?? r.positionPersons ?? {})
@@ -96,7 +95,6 @@ export default function ContractStatisticsPage() {
     { colKey: 'ratio', title: '比例', width: 65, align: 'center' as const, cell: ({ row }: { row: HistoryRecord }) => { const r = row.paymentPlan[0]?.ratio; return r !== undefined ? `${(r * 100).toFixed(1)}%` : '—'; } },
     { colKey: 'received', title: '状态', width: 60, align: 'center' as const, cell: () => <span style={{ color: '#00a870', fontWeight: 600 }}>已收</span> },
     { colKey: 'commission', title: '这笔提成（¥）', width: 110, align: 'right' as const, cell: ({ row }: { row: HistoryRecord }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.commission ?? 0)}</span> },
-    { colKey: 'ctc', title: '合同总提成（¥）', width: 115, align: 'right' as const, cell: ({ row }: { row: HistoryRecord }) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.contractTotalCommission ?? row.totalCommission ?? 0)}</span> },
     { colKey: 'createdAt', title: '保存时间', width: 145, cell: ({ row }: { row: HistoryRecord }) => <span style={{ color: '#6b7588', fontSize: 12 }}>{row.createdAt}</span> },
   ];
 
@@ -141,12 +139,6 @@ export default function ContractStatisticsPage() {
             </div>
           </div>
           <div style={{ flex: '1 1 160px', padding: '10px 14px', background: '#f2f3f7', border: '1px solid #e3e6ee', borderRadius: 8 }}>
-            <div style={{ fontSize: 11, color: '#5b6b85', marginBottom: 2 }}>合同总提成</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a', fontVariantNumeric: 'tabular-nums' }}>
-              ¥ {fmtMoney(contractTotalCommission)}
-            </div>
-          </div>
-          <div style={{ flex: '1 1 160px', padding: '10px 14px', background: '#fff6e8', border: '1px solid #ffe1b8', borderRadius: 8 }}>
             <div style={{ fontSize: 11, color: '#5b6b85', marginBottom: 2 }}>涉及人员</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#e37318', fontVariantNumeric: 'tabular-nums' }}>
               {personCount} 人
