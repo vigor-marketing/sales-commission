@@ -240,10 +240,7 @@ export default function CalculatorPage() {
         return;
       }
     }
-    if (payment.amountCNY > cnyAmount + 0.01) {
-      MessagePlugin.warning(`这笔收款（¥ ${payment.amountCNY.toFixed(2)}）不能大于合同总金额（¥ ${cnyAmount.toFixed(2)}）`);
-      return;
-    }
+    // 新模型按实际汇率折算：人民币以实际汇率计算，金额锁定在收款计划内，不再比较合同汇率的人民币
 
     setLoading(true);
     try {

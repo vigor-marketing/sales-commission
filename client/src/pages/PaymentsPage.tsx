@@ -25,6 +25,8 @@ interface CommissionRow {
   position: string;
   amount: number;
   totalCommission: number;
+  /** 实际结汇汇率（该笔收款记录） */
+  rate?: number;
   createdAt: string;
 }
 
@@ -95,6 +97,7 @@ export default function PaymentsPage() {
           position: pos,
           amount: amt,
           totalCommission: r.totalCommission,
+          rate: r.paymentPlan?.[0]?.rate,
           createdAt: r.createdAt,
         });
       }
@@ -188,6 +191,7 @@ export default function PaymentsPage() {
     { colKey: 'customerName', title: '姓名', width: 90, cell: ({ row }: { row: CommissionRow }) => row.customerName || '—' },
     { colKey: 'planIndex', title: '第几笔', width: 60, align: 'center' as const, cell: ({ row }: { row: CommissionRow }) => <span style={{ fontWeight: 600 }}>第{row.planIndex}笔</span> },
     { colKey: 'month', title: '提成月份', width: 100, align: 'center' as const, cell: ({ row }: { row: CommissionRow }) => row.month },
+    { colKey: 'rate', title: '实际结汇汇率', width: 100, align: 'center' as const, cell: ({ row }: { row: CommissionRow }) => row.rate ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>{Number(row.rate).toFixed(2)}</span> : '—' },
     { colKey: 'person', title: '涉及人员', width: 90, cell: ({ row }: { row: CommissionRow }) => <span style={{ color: '#0052d9', fontWeight: 600 }}>{row.person}</span> },
     { colKey: 'position', title: '岗位', width: 110, cell: ({ row }: { row: CommissionRow }) => <span style={{ background: '#e8f0ff', color: '#0052d9', border: '1px solid #cfe0ff', borderRadius: 4, padding: '1px 8px' }}>{row.position}</span> },
     { colKey: 'amount', title: '提成金额（¥）', width: 130, align: 'right' as const, cell: ({ row }: { row: CommissionRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },

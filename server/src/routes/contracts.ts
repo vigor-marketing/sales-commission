@@ -98,8 +98,6 @@ export function recomputeContractHistory(
     totalPlanCount: number;
   }
 ): void {
-  const salesAmount = Math.round(c.salesAmountOrig * c.rate * 100) / 100;
-  const salesCost = Math.round(c.fees.reduce((s, f) => s + (f.amountCNY || 0), 0) * 100) / 100;
   const settings = readSettings();
   const template = getTemplate(settings, c.templateId);
   const rows = db
@@ -120,43 +118,52 @@ export function recomputeContractHistory(
      WHERE id = ?`
   );
   for (const r of rows) {
-    // 原记录信息（保留已收状态与备注）
+    // 原记录信息（保留已收状态、备注与实际结汇汇率）
     let origReceived = true;
     let origNote = '';
+    let origRate: number | undefined;
     try {
       const orig = JSON.parse(r.payment_plan_json) as PaymentPlanItem[];
       origReceived = orig[0]?.received === true;
       origNote = orig[0]?.note ?? '';
+      if (orig[0]?.rate && orig[0]?.rate > 0) origRate = orig[0].rate;
     } catch {
       // 忽略
     }
-    // 计划内笔次：收款记录同步为新计划的对应笔（金额/比例/人民币）；追加笔（超出计划）保持原记录
+    // 计划内笔次：收款记录同步为新计划的对应笔（金额/比例/月份/币种），保留实际结汇汇率；
+    // 追加笔（超出计划）保持原记录
     let payment: PaymentPlanItem;
-    let ratio = 1;
     const planItem = c.plan[r.plan_index - 1];
     if (planItem) {
+      const payRate = origRate ?? planItem.rate ?? (c.salesCurrency === 'CNY' ? 1 : c.rate);
+      const payCNY = planItem.currency === 'CNY'
+        ? Math.round((planItem.amount ?? 0) * 100) / 100
+        : Math.round((planItem.amount ?? 0) * payRate * 100) / 100;
       payment = {
         month: planItem.month,
         currency: planItem.currency,
         amount: Math.round((planItem.amount ?? 0) * 100) / 100,
-        rate: planItem.rate ?? (c.salesCurrency === 'CNY' ? 1 : c.rate),
-        amountCNY: planItem.amountCNY ?? 0,
+        rate: payRate,
+        amountCNY: payCNY,
         received: origReceived,
         ratio: planItem.ratio,
         note: origNote || (planItem.note ?? ''),
       };
-      ratio = planItem.ratio ?? 1;
     } else {
       try {
         const orig = JSON.parse(r.payment_plan_json) as PaymentPlanItem[];
         payment = orig[0] ?? { month: '', currency: c.salesCurrency, amount: 0, rate: c.rate, amountCNY: 0, received: true };
-        ratio = orig[0]?.ratio ?? 1;
       } catch {
         payment = { month: '', currency: c.salesCurrency, amount: 0, rate: c.rate, amountCNY: 0, received: true };
       }
     }
     const totalPlanCount = Math.max(r.plan_index, c.totalPlanCount);
-    const result = calculateCommission({ salesAmount, salesCost }, template);
+    // 提成基数 = 实际汇率 × 美元收款金额（该笔人民币，不扣费用）；提成 = 基数 × 系数（全额）
+    const payBase =
+      payment.currency === 'CNY'
+        ? Math.round((payment.amount ?? 0) * 100) / 100
+        : Math.round((payment.amount ?? 0) * (payment.rate || (c.salesCurrency === 'CNY' ? 1 : c.rate)) * 100) / 100;
+    const result = calculateCommission({ salesAmount: payBase, salesCost: 0 }, template);
     result.positionPersons = c.positionPersons;
     result.salesAmountOrig = Math.round(c.salesAmountOrig * 100) / 100;
     result.salesCurrency = c.salesCurrency;
@@ -164,7 +171,7 @@ export function recomputeContractHistory(
     result.salesFees = c.fees;
     result.planIndex = r.plan_index;
     result.totalPlanCount = totalPlanCount;
-    result.commission = Math.round(result.totalCommission * ratio * 100) / 100;
+    result.commission = result.totalCommission;
     upd.run(
       c.customerName,
       JSON.stringify([payment]),

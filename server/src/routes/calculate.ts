@@ -245,9 +245,9 @@ calculateRouter.post('/', (req, res) => {
     commissionRatio = 1;
   }
 
-  // 校验收款金额（这笔/合计）不能大于业绩人民币
+  // 校验收款金额（这笔/合计）不能大于业绩人民币（仅旧模型数组校验；新模型按实际汇率折算，金额锁定在计划内）
   const planCNY = plan.reduce((s, p) => s + (p.amountCNY || 0), 0);
-  if (planCNY > salesAmount + 0.01) {
+  if (req.body?.payment === undefined && planCNY > salesAmount + 0.01) {
     res.status(400).json({
       error: `收款金额（¥ ${planCNY.toFixed(2)}）不能大于总金额（¥ ${salesAmount.toFixed(2)}），请检查收款计划`,
     });
@@ -257,7 +257,21 @@ calculateRouter.post('/', (req, res) => {
   // ---- 计算 ----
   const settings = readSettings();
   const template = getTemplate(settings, req.body?.templateId);
-  const result = calculateCommission({ salesAmount, salesCost }, template);
+  // 新模型（单笔收款）：提成基数 = 实际汇率 × 美元收款金额（该笔人民币，不扣费用）；
+  // 旧模型（数组）：保持 合同人民币 − 费用
+  const payBody = req.body?.payment as Record<string, unknown> | undefined;
+  const isPaymentBased = payBody !== undefined;
+  const payCurrency = (payBody?.currency as Currency) || salesCurrency;
+  const payRate = Number(payBody?.rate) > 0 ? Number(payBody?.rate) : salesCurrency === 'CNY' ? 1 : salesRate;
+  const calcSalesAmount = isPaymentBased
+    ? payCurrency === 'CNY'
+      ? Math.round((Number(payBody?.amount) || 0) * 100) / 100
+      : Math.round((Number(payBody?.amount) || 0) * payRate * 100) / 100
+    : salesAmount;
+  const result = calculateCommission(
+    { salesAmount: calcSalesAmount, salesCost: isPaymentBased ? 0 : salesCost },
+    template
+  );
   result.positionPersons = positionPersons;
   result.salesAmountOrig = Math.round(salesAmountOrig * 100) / 100;
   result.salesCurrency = salesCurrency;
@@ -265,7 +279,10 @@ calculateRouter.post('/', (req, res) => {
   result.salesFees = fees;
   result.planIndex = planIndex;
   result.totalPlanCount = totalPlanCount;
-  result.commission = Math.round(result.totalCommission * commissionRatio * 100) / 100;
+  // 这笔提成：新模型 = 实际汇率×美元金额×系数（全额）；旧模型 = 合同总提成×比例
+  result.commission = isPaymentBased
+    ? result.totalCommission
+    : Math.round(result.totalCommission * commissionRatio * 100) / 100;
 
   // ---- 入库（同合同同笔次 = 覆盖更新，先删旧记录再插入）----
   const db = getDb();
