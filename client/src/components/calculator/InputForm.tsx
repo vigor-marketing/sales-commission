@@ -126,14 +126,19 @@ export default function InputForm({
     updatePayment({ month: s});
   };
 
-  // 比例驱动金额
+  // 比例驱动金额（原币金额 = 人民币金额 ÷ 汇率；人民币 = 合同人民币 × 比例）
   const updateByRatio = (ratio: number) => {
-    updatePayment({ ratio, amount: Math.round(cnyAmount * ratio * 100) / 100 });
+    const r = payment?.currency === 'CNY' ? 1 : payment?.rate || rate || 1;
+    const cny = Math.round(cnyAmount * ratio * 100) / 100;
+    const amount = payment?.currency === 'CNY' ? cny : Math.round((cny / r) * 100) / 100;
+    updatePayment({ ratio, amount, amountCNY: cny });
   };
-  // 金额驱动比例
+  // 金额驱动比例（先按汇率折算人民币，再除以合同人民币）
   const updateByAmount = (amt: number) => {
-    const ratio = cnyAmount > 0 ? Math.round((amt / cnyAmount) * 10000) / 10000 : 0;
-    updatePayment({ amount: amt, ratio });
+    const r = payment?.currency === 'CNY' ? 1 : payment?.rate || rate || 1;
+    const payCNY = payment?.currency === 'CNY' ? Math.round(amt * 100) / 100 : Math.round(amt * r * 100) / 100;
+    const ratio = cnyAmount > 0 ? Math.min(1, Math.round((payCNY / cnyAmount) * 10000) / 10000) : 0;
+    updatePayment({ amount: amt, ratio, amountCNY: payCNY });
   };
 
   return (
