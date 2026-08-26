@@ -492,6 +492,69 @@ h4 {
   font-weight: 500;
 }
 
+/* ============================================================ 人员按月汇总展开明细 */
+.pm-detail {
+  padding: 10px 18px 14px 48px;
+  background: var(--bg-muted);
+}
+.pm-detail__contract {
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.pm-detail__contract:last-child {
+  margin-bottom: 0;
+}
+.pm-detail__contract-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.pm-detail__contract-head a {
+  color: var(--brand);
+  text-decoration: none;
+}
+.pm-detail__contract-head a:hover {
+  text-decoration: underline;
+}
+.pm-detail__subtotal {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+.pm-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 16px;
+}
+.pm-detail__chip {
+  background: var(--brand-light);
+  color: var(--brand);
+  border: 1px solid #cfe0ff;
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 表格类型标签（提成明细/合同汇总） */
+.tpl-tag {
+  display: inline-block;
+  background: var(--bg-muted);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* ============================================================ 编辑表格（设置页） */
 .settings-table th {
   background: var(--bg-muted);

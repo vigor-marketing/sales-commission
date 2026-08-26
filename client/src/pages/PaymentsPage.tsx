@@ -248,7 +248,7 @@ export default function PaymentsPage() {
   const contractColumns = [
     { colKey: 'contractNo', title: '合同号', width: 140, cell: ({ row }: { row: ContractSummaryRow }) => <Link to={`/contract-statistics/${encodeURIComponent(row.contractNo)}`} style={{ color: '#0052d9', fontWeight: 600 }}>{row.contractNo || '—'}</Link> },
     { colKey: 'customerName', title: '销售姓名', width: 90, cell: ({ row }: { row: ContractSummaryRow }) => row.customerName || '—' },
-    { colKey: 'templateName', title: '表格类型', width: 130, cell: ({ row }: { row: ContractSummaryRow }) => row.templateName || '—' },
+    { colKey: 'templateName', title: '表格类型', width: 130, cell: ({ row }: { row: ContractSummaryRow }) => row.templateName ? <span className="tpl-tag">{row.templateName}</span> : '—' },
     { colKey: 'planCount', title: '笔数', width: 70, align: 'center' as const, cell: ({ row }: { row: ContractSummaryRow }) => row.planCount },
     { colKey: 'personCount', title: '涉及人数', width: 90, align: 'center' as const, cell: ({ row }: { row: ContractSummaryRow }) => `${row.personCount} 人` },
     { colKey: 'amount', title: '提成总额（¥）', width: 140, align: 'right' as const, cell: ({ row }: { row: ContractSummaryRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
@@ -316,7 +316,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* 筛选条：年度 / 月份（默认全年）/ 岗位（在前）→ 姓名（在后，逐级联动） */}
-      <div className="filter-bar" style={{ marginBottom: 16 }}>
+      <div className="filter-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="filter-label">年度</span>
           <Select
@@ -337,7 +337,7 @@ export default function PaymentsPage() {
             placeholder="全年"
           />
         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="filter-label">岗位</span>
           <Select
             value={position || undefined}
@@ -374,15 +374,15 @@ export default function PaymentsPage() {
         </Button>
       </div>
 
-      {/* 精简概览（删除"提成总计"大卡和"按人合计"Tag 列表） */}
+      {/* 概览卡 */}
       <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <div className="summary-card">
           <div className="label">合同数</div>
           <div className="value">{contractCount}</div>
         </div>
-        <div className="summary-card">
+        <div className="summary-card primary-card">
           <div className="label">提成合计（筛选后）</div>
-          <div className="value" style={{ color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(totalAmount)}</div>
+          <div className="value" style={{ fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(totalAmount)}</div>
         </div>
       </div>
 
@@ -435,26 +435,16 @@ export default function PaymentsPage() {
               byContract.set(it.contractNo, e);
             }
             return (
-              <div style={{ padding: '6px 16px 12px 48px', background: '#fafbfd' }}>
+              <div className="pm-detail">
                 {[...byContract.values()].map((c) => (
-                  <div key={c.contractNo} style={{ marginBottom: 8, fontSize: 13 }}>
-                    <div style={{ fontWeight: 600, color: '#4a5568', marginBottom: 3 }}>
-                      {c.contractNo}（小计 ¥{fmtMoney(c.total)}）
+                  <div key={c.contractNo} className="pm-detail__contract">
+                    <div className="pm-detail__contract-head">
+                      <Link to={`/contract-statistics/${encodeURIComponent(c.contractNo)}`}>{c.contractNo}</Link>
+                      <span className="pm-detail__subtotal">小计 ¥{fmtMoney(c.total)}</span>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 14 }}>
+                    <div className="pm-detail__chips">
                       {c.list.map((it, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            background: '#e8f0ff',
-                            color: '#0052d9',
-                            border: '1px solid #cfe0ff',
-                            borderRadius: 4,
-                            padding: '1px 8px',
-                            fontSize: 12,
-                            fontVariantNumeric: 'tabular-nums',
-                          }}
-                        >
+                        <span key={i} className="pm-detail__chip">
                           {it.position} ¥{fmtMoney(it.amount)}
                         </span>
                       ))}
