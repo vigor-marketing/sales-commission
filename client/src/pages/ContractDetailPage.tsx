@@ -81,6 +81,7 @@ export default function ContractDetailPage() {
     { colKey: 'ratio', title: '比例', width: 65, align: 'center' as const, cell: ({ row }: { row: HistoryRecord }) => { const r = row.paymentPlan[0]?.ratio; return r !== undefined ? `${(r * 100).toFixed(1)}%` : '—'; } },
     { colKey: 'received', title: '状态', width: 60, align: 'center' as const, cell: () => <span style={{ color: '#00a870', fontWeight: 600 }}>已收</span> },
     { colKey: 'commission', title: '这笔提成（¥）', width: 110, align: 'right' as const, cell: ({ row }: { row: HistoryRecord }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.commission ?? 0)}</span> },
+    { colKey: 'note', title: '备注', width: 140, cell: ({ row }: { row: HistoryRecord }) => { const n = row.paymentPlan[0]?.note; return n ? <span style={{ color: '#e37318', fontSize: 12 }}>{n}</span> : '—'; } },
     { colKey: 'createdAt', title: '保存时间', width: 145, cell: ({ row }: { row: HistoryRecord }) => <span style={{ color: '#6b7588', fontSize: 12 }}>{row.createdAt}</span> },
   ];
 

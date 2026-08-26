@@ -101,8 +101,14 @@ export default function InputForm({
           h.month === p.month &&
           h.currency === p.currency &&
           Math.abs((h.amount ?? 0) - (p.amount ?? 0)) < 0.01;
-        // 已收：展示实际结汇汇率（保存时记录）；未收：展示计划预期汇率
-        return { ...p, planIndex: pi, paid, rate: paid ? h?.rate ?? p.rate : p.rate };
+        // 已收：展示实际结汇汇率与备注（保存时记录）；未收：展示计划预期汇率/备注
+        return {
+          ...p,
+          planIndex: pi,
+          paid,
+          rate: paid ? h?.rate ?? p.rate : p.rate,
+          note: paid ? h?.note ?? '' : p.note ?? '',
+        };
       }),
     [contractPlan, planHistory]
   );
@@ -317,6 +323,11 @@ export default function InputForm({
                       title="未完成收款；录入该笔并保存后显示已收款"
                     >
                       未收款
+                    </span>
+                  )}
+                  {p.note && (
+                    <span style={{ fontSize: 12, color: '#e37318', whiteSpace: 'nowrap' }}>
+                      备注：{p.note}
                     </span>
                   )}
                 </div>
