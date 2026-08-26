@@ -391,12 +391,15 @@ export default function InputForm({
             {payment.currency !== 'CNY' && (
               <>
                 <span style={{ fontSize: 13, color: '#6b7588', whiteSpace: 'nowrap' }}>× 实际结汇汇率</span>
-                <Input
-                  value={String(payment.rate)}
+                <InputNumber
+                  value={payment.rate}
                   onChange={(v) => updateRate(Number(v))}
                   placeholder="实际结汇汇率"
-                  style={{ width: 80 }}
+                  min={0}
+                  step={0.01}
+                  style={{ width: 100 }}
                   size="medium"
+                  theme="column"
                 />
               </>
             )}
@@ -417,11 +420,6 @@ export default function InputForm({
         ) : (
           <div style={{ color: '#9aa3b5', fontSize: 13, padding: '10px 0' }}>
             该合同已录入 {planHistory.length} 笔，请填写第 {planIndex} 笔收款信息
-          </div>
-        )}
-        {payment && payCNY > cnyAmount && cnyAmount > 0 && (
-          <div style={{ marginTop: 8, fontSize: 13, color: '#d54941', whiteSpace: 'nowrap' }}>
-            ⚠️ 这笔收款（¥ {fmtMoney(payCNY)}）不能大于合同总金额（¥ {fmtMoney(cnyAmount)}）
           </div>
         )}
       </div>
