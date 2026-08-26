@@ -441,8 +441,8 @@ export default function ContractForm({
             <InputNumber value={item.amount} onChange={(v) => updatePlan(idx, { amount: Number(v) || 0 })} placeholder="原币金额" min={0} size="small" theme="column" style={{ width: 140 }} />
             {item.currency !== 'CNY' && (
               <>
-                <span style={{ fontSize: 12, color: '#6b7588' }}>×汇率</span>
-                <InputNumber value={item.rate} onChange={(v) => updatePlan(idx, { rate: Number(v) > 0 ? Number(v) : item.rate })} placeholder="汇率" min={0} step={0.01} size="small" theme="normal" style={{ width: 80 }} />
+                <span style={{ fontSize: 12, color: '#6b7588' }}>× 预期结汇汇率</span>
+                <InputNumber value={item.rate} onChange={(v) => updatePlan(idx, { rate: Number(v) > 0 ? Number(v) : item.rate })} placeholder="预期结汇汇率" min={0} step={0.01} size="small" theme="normal" style={{ width: 80 }} />
               </>
             )}
             <span style={{ fontSize: 12, color: '#4a5568' }}>=</span>

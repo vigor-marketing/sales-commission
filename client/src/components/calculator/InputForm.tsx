@@ -278,7 +278,7 @@ export default function InputForm({
                     <span style={{ fontSize: 12, color: '#6b7588', whiteSpace: 'nowrap' }}>{(p.ratio * 100).toFixed(1)}%</span>
                   )}
                   {p.currency !== 'CNY' && (
-                    <span style={{ fontSize: 12, color: '#8a94a6', whiteSpace: 'nowrap' }}>× {Number(p.rate).toFixed(2)} = ¥ {fmtMoney(p.amountCNY ?? 0)}</span>
+                    <span style={{ fontSize: 12, color: '#8a94a6', whiteSpace: 'nowrap' }}>预期结汇汇率 {Number(p.rate).toFixed(2)} = ¥ {fmtMoney(p.amountCNY ?? 0)}</span>
                   )}
                   {p.paid ? (
                     <span
@@ -390,11 +390,11 @@ export default function InputForm({
             </div>
             {payment.currency !== 'CNY' && (
               <>
-                <span style={{ fontSize: 13, color: '#6b7588', whiteSpace: 'nowrap' }}>×汇率</span>
+                <span style={{ fontSize: 13, color: '#6b7588', whiteSpace: 'nowrap' }}>× 实际结汇汇率</span>
                 <Input
                   value={String(payment.rate)}
                   onChange={(v) => updateRate(Number(v))}
-                  placeholder="汇率"
+                  placeholder="实际结汇汇率"
                   style={{ width: 80 }}
                   size="medium"
                 />
