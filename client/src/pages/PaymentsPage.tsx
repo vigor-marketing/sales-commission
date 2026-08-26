@@ -53,15 +53,14 @@ interface ContractSummaryRow {
   amount: number;
 }
 
-/** 人员 × 月份：该人员所有相关合同的提成汇总 */
-interface PersonMonthRow {
+/** 人员按月提成：一人一行，行内展示各月份提成 */
+interface PersonRow {
   id: string;
   person: string;
-  month: string;
-  /** 涉及合同数 */
-  contractCount: number;
+  /** 月份明细（月份 → 提成金额/合同数） */
+  monthItems: Array<{ month: string; amount: number; contractCount: number }>;
   /** 提成合计（¥） */
-  amount: number;
+  total: number;
 }
 
 const SALES_POSITIONS = ['销售人员', '销售主管', '项目管理人员', '销售助理'];
@@ -257,46 +256,58 @@ export default function PaymentsPage() {
     { colKey: 'amount', title: '提成总额（¥）', width: 140, align: 'right' as const, cell: ({ row }: { row: ContractSummaryRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
   ];
 
-  // 人员 × 月份：该人员所有相关合同的提成汇总（随姓名/岗位筛选联动）
-  const personMonthRows = useMemo(() => {
-    const map = new Map<string, { person: string; month: string; contracts: Set<string>; amount: number }>();
+  // 人员按月提成：一人一行，行内展示各月份提成（随姓名/岗位筛选联动）
+  const personRows = useMemo(() => {
+    const map = new Map<string, { monthItems: Map<string, { amount: number; contracts: Set<string> }> }>();
     for (const r of filtered) {
-      const key = `${r.person}|${r.month}`;
-      const e =
-        map.get(key) ?? { person: r.person, month: r.month, contracts: new Set<string>(), amount: 0 };
-      e.contracts.add(r.contractNo);
-      e.amount = Math.round((e.amount + r.amount) * 100) / 100;
-      map.set(key, e);
+      const e = map.get(r.person) ?? { monthItems: new Map<string, { amount: number; contracts: Set<string> }>() };
+      const mi = e.monthItems.get(r.month) ?? { amount: 0, contracts: new Set<string>() };
+      mi.amount = Math.round((mi.amount + r.amount) * 100) / 100;
+      mi.contracts.add(r.contractNo);
+      e.monthItems.set(r.month, mi);
+      map.set(r.person, e);
     }
-    return [...map.values()]
-      .map((e) => ({
-        id: `${e.person}|${e.month}`,
-        person: e.person,
-        month: e.month,
-        contractCount: e.contracts.size,
-        amount: e.amount,
+    return [...map.entries()]
+      .map(([person, e]) => ({
+        id: person,
+        person,
+        monthItems: [...e.monthItems.entries()]
+          .sort((a, b) => b[0].localeCompare(a[0]))
+          .map(([m, mi]) => ({ month: m, amount: mi.amount, contractCount: mi.contracts.size })),
+        total: Math.round([...e.monthItems.values()].reduce((s, mi) => s + mi.amount, 0) * 100) / 100,
       }))
-      .sort((a, b) => a.person.localeCompare(b.person, 'zh-CN') || b.month.localeCompare(a.month));
+      .sort((a, b) => a.person.localeCompare(b.person, 'zh-CN'));
   }, [filtered]);
 
-  const personMonthColumns = [
-    { colKey: 'person', title: '人员', width: 110, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ color: '#0052d9', fontWeight: 600 }}>{row.person}</span> },
-    { colKey: 'month', title: '月份', width: 100, align: 'center' as const, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ fontWeight: 600 }}>{row.month}</span> },
-    { colKey: 'contractCount', title: '合同数', width: 80, align: 'center' as const, cell: ({ row }: { row: PersonMonthRow }) => row.contractCount },
-    { colKey: 'amount', title: '提成合计（¥）', width: 160, align: 'right' as const, cell: ({ row }: { row: PersonMonthRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
+  const personColumns = [
+    { colKey: 'person', title: '人员', width: 110, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#0052d9', fontWeight: 600 }}>{row.person}</span> },
+    {
+      colKey: 'monthItems',
+      title: '月份提成',
+      cell: ({ row }: { row: PersonRow }) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {row.monthItems.map((m) => (
+            <span key={m.month} className="pm-detail__chip">
+              {m.month} ¥{fmtMoney(m.amount)}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+    { colKey: 'total', title: '提成合计（¥）', width: 150, align: 'right' as const, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.total)}</span> },
   ];
 
-  // 人员×月份 → 明细（合同 × 岗位 × 提成金额），供展开行展示
-  const personMonthDetail = useMemo(() => {
-    const map = new Map<string, Array<{ contractNo: string; position: string; amount: number }>>();
+  // 人员 → 月份 → 合同 → 岗位金额，供展开行展示
+  const personDetail = useMemo(() => {
+    const map = new Map<string, Map<string, Map<string, Array<{ position: string; amount: number }>>>>();
     for (const r of filtered) {
-      const key = `${r.person}|${r.month}`;
-      const arr = map.get(key) ?? [];
-      arr.push({ contractNo: r.contractNo, position: r.position, amount: r.amount });
-      map.set(key, arr);
-    }
-    for (const arr of map.values()) {
-      arr.sort((a, b) => a.contractNo.localeCompare(b.contractNo) || a.position.localeCompare(b.position, 'zh-CN'));
+      const byMonth = map.get(r.person) ?? new Map<string, Map<string, Array<{ position: string; amount: number }>>>();
+      const byContract = byMonth.get(r.month) ?? new Map<string, Array<{ position: string; amount: number }>>();
+      const arr = byContract.get(r.contractNo) ?? [];
+      arr.push({ position: r.position, amount: r.amount });
+      byContract.set(r.contractNo, arr);
+      byMonth.set(r.month, byContract);
+      map.set(r.person, byMonth);
     }
     return map;
   }, [filtered]);
@@ -411,50 +422,63 @@ export default function PaymentsPage() {
         />
       </div>
 
-      {/* 人员按月提成汇总：该人员所有相关合同按月份的提成合计 */}
+      {/* 人员按月提成汇总：一人一行，行内展示各月份提成，展开查看合同/岗位明细 */}
       <div className="section-card">
         <div className="section-title">
           <span>人员按月提成汇总</span>
           <span style={{ fontSize: 12, fontWeight: 400, color: '#9aa3b5' }}>
             {customerName ? `（姓名：${customerName}）` : ''}
             {position ? `（岗位：${position}）` : ''}
-            {personMonthRows.length === 0 ? '当前筛选无数据' : `共 ${personMonthRows.length} 条，展开查看该月涉及合同/岗位明细`}
+            {personRows.length === 0 ? '当前筛选无数据' : `共 ${personRows.length} 人，展开查看各月合同/岗位明细`}
           </span>
         </div>
         <Table
           className="table-responsive"
           rowKey="id"
-          data={personMonthRows}
-          columns={personMonthColumns}
+          data={personRows}
+          columns={personColumns}
           expandedRowKeys={expandedKeys}
           onExpandChange={(keys) => setExpandedKeys(keys as Array<string | number>)}
-          expandedRow={({ row }: { row: PersonMonthRow }) => {
-            const items = personMonthDetail.get(row.id) ?? [];
-            const byContract = new Map<string, { contractNo: string; list: Array<{ position: string; amount: number }>; total: number }>();
-            for (const it of items) {
-              const e = byContract.get(it.contractNo) ?? { contractNo: it.contractNo, list: [], total: 0 };
-              e.list.push({ position: it.position, amount: it.amount });
-              e.total = Math.round((e.total + it.amount) * 100) / 100;
-              byContract.set(it.contractNo, e);
-            }
+          expandedRow={({ row }: { row: PersonRow }) => {
+            const byMonth =
+              personDetail.get(row.person) ??
+              new Map<string, Map<string, Array<{ position: string; amount: number }>>>();
+            const months = [...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0]));
             return (
               <div className="pm-detail">
-                {[...byContract.values()].map((c) => (
-                  <div key={c.contractNo} className="pm-detail__contract">
+                {months.map(([month, byContract]) => (
+                  <div key={month} className="pm-detail__contract">
                     <div className="pm-detail__contract-head">
-                      <Link to={`/contract-statistics/${encodeURIComponent(c.contractNo)}?from=payments`}>{c.contractNo}</Link>
-                      <span className="pm-detail__subtotal">小计 ¥{fmtMoney(c.total)}</span>
+                      <span style={{ color: '#4a5568' }}>{month}</span>
+                      <span className="pm-detail__subtotal">
+                        {row.monthItems.find((m) => m.month === month)?.amount !== undefined
+                          ? `¥ ${fmtMoney(row.monthItems.find((m) => m.month === month)?.amount ?? 0)}`
+                          : ''}
+                      </span>
                     </div>
-                    <div className="pm-detail__chips">
-                      {c.list.map((it, i) => (
-                        <span key={i} className="pm-detail__chip">
-                          {it.position} ¥{fmtMoney(it.amount)}
-                        </span>
-                      ))}
-                    </div>
+                    {[...byContract.entries()].map(([no, items]) => {
+                      const cTotal = Math.round(items.reduce((s, it) => s + it.amount, 0) * 100) / 100;
+                      return (
+                        <div key={no} style={{ paddingLeft: 14, marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, color: '#4a5568', marginBottom: 3 }}>
+                            <Link to={`/contract-statistics/${encodeURIComponent(no)}?from=payments`}>{no}</Link>
+                            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>
+                              小计 ¥{fmtMoney(cTotal)}
+                            </span>
+                          </div>
+                          <div className="pm-detail__chips" style={{ paddingLeft: 16 }}>
+                            {items.map((it, i) => (
+                              <span key={i} className="pm-detail__chip">
+                                {it.position} ¥{fmtMoney(it.amount)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
-                {items.length === 0 && <span style={{ color: '#9aa3b5', fontSize: 12 }}>无明细</span>}
+                {months.length === 0 && <span style={{ color: '#9aa3b5', fontSize: 12 }}>无明细</span>}
               </div>
             );
           }}
