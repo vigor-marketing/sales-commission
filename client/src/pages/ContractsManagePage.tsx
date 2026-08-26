@@ -123,7 +123,10 @@ export default function ContractsManagePage() {
       colKey: 'template', title: '表格类型', width: 130,
       cell: ({ row }: { row: Contract }) => {
         const t = settings?.templates.find((x) => x.id === row.templateId);
-        return t ? t.name : row.templateId ? '未知模板' : '—';
+        if (t) return t.name;
+        if (row.templateId) return '未知模板';
+        // 空 templateId：按实际计算所用模板（默认第一个）带出
+        return settings?.templates[0]?.name ?? '—';
       },
     },
     { colKey: 'salesAmount', title: '业绩', width: 120, align: 'right' as const, cell: ({ row }: { row: Contract }) => `${row.salesAmountOrig.toLocaleString()} ${row.salesCurrency}` },

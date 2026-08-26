@@ -11,7 +11,10 @@ export default function ContractInfoCard({ contract: c, settings }: Props) {
   const salesCNY = (c.salesCurrency === 'CNY' ? 1 : c.salesRate || 1) * c.salesAmountOrig;
   const feesTotal = c.salesFees.reduce((s, f) => s + (f.amountCNY || 0), 0);
   const templateName =
-    settings?.templates.find((t) => t.id === c.templateId)?.name ?? c.templateId ?? '默认表格';
+    settings?.templates.find((t) => t.id === c.templateId)?.name ??
+    c.templateId ??
+    settings?.templates[0]?.name ??
+    '默认表格';
 
   return (
     <div className="section-card">
