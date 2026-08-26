@@ -443,27 +443,29 @@ export default function PaymentsPage() {
           size="small"
           tableLayout="auto"
           empty={loading ? '加载中…' : '当前筛选无数据'}
+          footerSummary={
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 32,
+                padding: '10px 4px',
+                fontSize: 13,
+                color: '#4a5568',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span>
+                当月总计（{currentMonth}）：
+                <b style={{ color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(currentMonthTotal)}</b>
+              </span>
+              <span>
+                年度总计（{year}）：
+                <b style={{ color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(yearTotal)}</b>
+              </span>
+            </div>
+          }
         />
-        {/* 当月/年度总计 */}
-        <div
-          style={{
-            display: 'flex',
-            gap: 28,
-            padding: '10px 4px 2px',
-            fontSize: 13,
-            color: '#4a5568',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span>
-            当月总计（{currentMonth}）：
-            <b style={{ color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(currentMonthTotal)}</b>
-          </span>
-          <span>
-            年度总计（{year}）：
-            <b style={{ color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>¥ {fmtMoney(yearTotal)}</b>
-          </span>
-        </div>
       </div>
 
       {/* 人员按月提成汇总：一人一行，行内展示各月份提成，展开查看合同/岗位明细 */}
