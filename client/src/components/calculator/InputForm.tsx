@@ -245,7 +245,7 @@ export default function InputForm({
           <span style={{ fontWeight: 600, fontSize: 14, color: '#4a5568', whiteSpace: 'nowrap' }}>
             ③ 这笔收款
             {contractNo
-              ? `（计划 ${totalPlanCount} 笔，已收 ${planHistory.length} 笔${planIndex > totalPlanCount ? '，本次为追加收款' : `，本次第 ${planIndex} 笔`}）`
+              ? `（计划 ${totalPlanCount} 笔，已收 ${planHistory.length} 笔${planIndex > contractPlan.length ? '，本次为追加收款' : `，本次第 ${planIndex} 笔`}）`
               : ''}
           </span>
           <span style={{ fontSize: 12, color: '#9aa3b5', whiteSpace: 'nowrap' }}>
@@ -344,7 +344,7 @@ export default function InputForm({
             <span style={{ fontSize: 12, color: '#8a94a6', minWidth: 44, whiteSpace: 'nowrap' }}>
               第{planIndex}笔
             </span>
-            {planIndex > totalPlanCount && (
+            {planIndex > contractPlan.length && (
               <span
                 style={{
                   background: '#fff6e8',
@@ -435,7 +435,7 @@ export default function InputForm({
             >
               ¥ {fmtMoney(payCNY)}
             </span>
-            {planIndex > totalPlanCount && (
+            {planIndex > contractPlan.length && (
               <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                 <span style={{ fontSize: 12, color: '#e37318', fontWeight: 600, whiteSpace: 'nowrap' }}>
                   备注（特殊收款原因，必填）

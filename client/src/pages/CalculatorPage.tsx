@@ -242,7 +242,7 @@ export default function CalculatorPage() {
       }
     }
     // 特殊收款（超出计划笔数）必须填写备注说明原因
-    if (planIndex > totalPlanCount && !(payment.note ?? '').trim()) {
+    if (planIndex > contractPlan.length && !(payment.note ?? '').trim()) {
       MessagePlugin.warning('特殊收款（超出计划笔数）必须填写备注说明原因');
       return;
     }
@@ -308,7 +308,7 @@ export default function CalculatorPage() {
       const ratioPct = res.contractPaidRatio !== undefined ? Math.round(res.contractPaidRatio * 10000) / 100 : NaN;
       const paidMsg = `提成 ¥ ${res.commission?.toFixed(2) ?? res.totalCommission.toFixed(2)}`;
       // 特殊收款（超出计划笔数）：仅记录，不计算提成
-      if (planIndex > totalPlanCount) {
+      if (planIndex > contractPlan.length) {
         MessagePlugin.info(`已记录第 ${planIndex} 笔特殊收款（超出计划笔数，仅记录不计算提成，备注：${(payment.note ?? '').trim()}；已自动进入第 ${nextIdx} 笔）`);
       } else if (res.contractPaidFull) {
         MessagePlugin.success(`已保存第 ${planIndex} 笔收款，${paidMsg}；该合同累计收款 100%，已收完（已自动进入第 ${nextIdx} 笔）`);
