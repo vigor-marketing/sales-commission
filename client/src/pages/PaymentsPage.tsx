@@ -59,8 +59,12 @@ interface PersonRow {
   person: string;
   /** 月份明细（月份 → 提成金额/合同数） */
   monthItems: Array<{ month: string; amount: number; contractCount: number }>;
-  /** 提成合计（¥） */
+  /** 提成合计（¥，当前筛选下） */
   total: number;
+  /** 当月（当前真实月份）提成（¥） */
+  currentMonthAmount: number;
+  /** 当年（所选年份）提成（¥） */
+  yearAmount: number;
 }
 
 const SALES_POSITIONS = ['销售人员', '销售主管', '项目管理人员', '销售助理'];
@@ -238,6 +242,21 @@ export default function PaymentsPage() {
     [allRows, year, customerName, position]
   );
 
+  // 每人的当月/当年提成（不受月份筛选影响，随年份/岗位/姓名筛选联动）
+  const personYearMonthAmounts = useMemo(() => {
+    const map = new Map<string, { currentMonth: number; year: number }>();
+    for (const r of allRows) {
+      if (!year || !r.month.startsWith(year)) continue;
+      if (!matchPersonPosition(r)) continue;
+      const e = map.get(r.person) ?? { currentMonth: 0, year: 0 };
+      e.year = Math.round((e.year + r.amount) * 100) / 100;
+      if (r.month === currentMonth) e.currentMonth = Math.round((e.currentMonth + r.amount) * 100) / 100;
+      map.set(r.person, e);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRows, year, currentMonth, customerName, position]);
+
   // 第一级：按合同汇总（合同号 → 销售人员 + 笔数 + 涉及人数 + 提成总额）
   const contractRows = useMemo(() => {
     const map = new Map<
@@ -292,16 +311,21 @@ export default function PaymentsPage() {
       map.set(r.person, e);
     }
     return [...map.entries()]
-      .map(([person, e]) => ({
-        id: person,
-        person,
-        monthItems: [...e.monthItems.entries()]
-          .sort((a, b) => b[0].localeCompare(a[0]))
-          .map(([m, mi]) => ({ month: m, amount: mi.amount, contractCount: mi.contracts.size })),
-        total: Math.round([...e.monthItems.values()].reduce((s, mi) => s + mi.amount, 0) * 100) / 100,
-      }))
+      .map(([person, e]) => {
+        const ym = personYearMonthAmounts.get(person);
+        return {
+          id: person,
+          person,
+          monthItems: [...e.monthItems.entries()]
+            .sort((a, b) => b[0].localeCompare(a[0]))
+            .map(([m, mi]) => ({ month: m, amount: mi.amount, contractCount: mi.contracts.size })),
+          total: Math.round([...e.monthItems.values()].reduce((s, mi) => s + mi.amount, 0) * 100) / 100,
+          currentMonthAmount: ym?.currentMonth ?? 0,
+          yearAmount: ym?.year ?? 0,
+        };
+      })
       .sort((a, b) => a.person.localeCompare(b.person, 'zh-CN'));
-  }, [filtered]);
+  }, [filtered, personYearMonthAmounts]);
 
   const personColumns = [
     { colKey: 'person', title: '人员', width: 110, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#0052d9', fontWeight: 600 }}>{row.person}</span> },
@@ -318,7 +342,8 @@ export default function PaymentsPage() {
         </div>
       ),
     },
-    { colKey: 'total', title: '提成合计（¥）', width: 150, align: 'right' as const, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.total)}</span> },
+    { colKey: 'currentMonthAmount', title: '当月（¥）', width: 110, align: 'right' as const, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.currentMonthAmount)}</span> },
+    { colKey: 'yearAmount', title: '当年（¥）', width: 110, align: 'right' as const, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.yearAmount)}</span> },
   ];
 
   // 人员 → 月份 → 合同 → 岗位金额，供展开行展示
