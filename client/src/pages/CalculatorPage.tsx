@@ -166,7 +166,8 @@ export default function CalculatorPage() {
   const handleNewPayment = () => {
     if (!contractNo) return;
     const nextIndex = planHistory.length + 1;
-    const total = Math.max(contractPlan.length || totalPlanCount, nextIndex);
+    // 计划笔数保持合同计划数（追加笔 planIndex 可超过，仍以计划数为准）
+    const total = contractPlan.length || totalPlanCount;
     setPlanIndex(nextIndex);
     setTotalPlanCount(total);
     setResult(null);

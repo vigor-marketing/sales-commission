@@ -157,7 +157,8 @@ export function recomputeContractHistory(
         payment = { month: '', currency: c.salesCurrency, amount: 0, rate: c.rate, amountCNY: 0, received: true };
       }
     }
-    const totalPlanCount = Math.max(r.plan_index, c.totalPlanCount);
+    // 计划笔数统一用合同计划数（追加款也保持合同计划数，便于识别为特殊收款）
+    const totalPlanCount = c.totalPlanCount;
     // 提成基数 = 实际汇率 × 美元收款金额（该笔人民币，不扣费用）；提成 = 基数 × 系数（全额）
     const payBase =
       payment.currency === 'CNY'

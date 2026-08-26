@@ -209,6 +209,8 @@ calculateRouter.post('/', (req, res) => {
     } catch {
       // 合同不存在/解析失败：不阻断（交给后续校验）
     }
+    // 计划笔数统一用合同收款计划长度（追加款也保持合同计划数，便于识别为特殊收款）
+    if (planCount !== Infinity) totalPlanCount = planCount;
     // 校验该合同已有比例之和 + 这笔 ≤ 100%（仅计划内笔次；追加笔不受限）
     const rows = db
       .prepare(`SELECT result_json, payment_plan_json FROM calculation_history WHERE contract_no = ? AND customer_name = ?`)
