@@ -306,11 +306,11 @@ export default function ContractForm({
           />
           {active.salesCurrency !== 'CNY' && (
             <>
-              <span style={{ fontSize: 13, color: '#6b7588' }}>× 汇率</span>
+              <span style={{ fontSize: 13, color: '#6b7588' }}>× 预期结汇汇率</span>
               <InputNumber
                 value={active.salesRate}
                 onChange={(v) => setActive({ salesRate: Number(v) > 0 ? Number(v) : active.salesRate })}
-                placeholder="汇率"
+                placeholder="预期结汇汇率"
                 style={{ width: 100 }}
                 min={0}
                 step={0.01}
