@@ -43,7 +43,8 @@ export default function PaymentsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(false);
   const [year, setYear] = useState<string>(String(new Date().getFullYear()));
-  const [month, setMonth] = useState<string>(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  // 默认全年（月份筛选由用户自行选择，避免把非当月收款隐藏造成困惑）
+  const [month, setMonth] = useState<string>('');
   const [customerName, setCustomerName] = useState<string>('');
   const [position, setPosition] = useState<string>('');
 
@@ -210,7 +211,7 @@ export default function PaymentsPage() {
         <Button variant="outline" onClick={load} loading={loading}>刷新</Button>
       </div>
 
-      {/* 筛选条：年度 / 月份（默认当月）/ 岗位（在前）→ 姓名（在后，逐级联动） */}
+      {/* 筛选条：年度 / 月份（默认全年）/ 岗位（在前）→ 姓名（在后，逐级联动） */}
       <div className="filter-bar" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="filter-label">年度</span>
