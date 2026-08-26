@@ -1,11 +1,11 @@
 /** 提成统计页：
- * - 默认当月所有合同所有人员
- * - 筛选：月份/姓名/岗位（姓名 = 合同 customerName 或 positionPersons 人员）
- * - 提成明细表：每合同×每笔×岗位×人员，单人筛选只显示该人
+ * - 默认当年所有合同所有人员
+ * - 筛选：年份/月份/姓名/岗位（姓名 = 合同 customerName 或 positionPersons 人员）
+ * - 提成明细：二级展示 —— 第一级按合同汇总（销售人员信息），点合同号进入该合同统计页看分人分笔数明细
  * - 按月统计表：按月聚合（年-月 + 合同数 + 笔数 + 涉及人员 + 提成合计）
- * - 删除原"提成总计"卡和"按销售汇总"按人 Tag 列表
  */
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Select, Button, Table, MessagePlugin } from 'tdesign-react';
 import type { HistoryRecord, PaymentPlanItem, Settings } from '../types';
 import { getHistory } from '../api/history';
@@ -35,6 +35,19 @@ interface MonthRow {
   count: number;
   people: number;
   total: number;
+}
+
+/** 第一级：按合同汇总（销售人员信息） */
+interface ContractSummaryRow {
+  contractNo: string;
+  customerName: string;
+  templateName: string;
+  /** 已录笔数 */
+  planCount: number;
+  /** 涉及人数 */
+  personCount: number;
+  /** 提成总额（¥） */
+  amount: number;
 }
 
 const SALES_POSITIONS = ['销售人员', '销售主管', '项目管理人员', '销售助理'];
@@ -186,16 +199,46 @@ export default function PaymentsPage() {
   const totalAmount = Math.round(filtered.reduce((s, r) => s + r.amount, 0) * 100) / 100;
   const contractCount = new Set(filtered.map((r) => r.contractNo)).size;
 
-  const detailColumns = [
-    { colKey: 'contractNo', title: '合同号', width: 130, cell: ({ row }: { row: CommissionRow }) => <span style={{ fontWeight: 600 }}>{row.contractNo || '—'}</span> },
-    { colKey: 'customerName', title: '姓名', width: 90, cell: ({ row }: { row: CommissionRow }) => row.customerName || '—' },
-    { colKey: 'planIndex', title: '第几笔', width: 60, align: 'center' as const, cell: ({ row }: { row: CommissionRow }) => <span style={{ fontWeight: 600 }}>第{row.planIndex}笔</span> },
-    { colKey: 'month', title: '提成月份', width: 100, align: 'center' as const, cell: ({ row }: { row: CommissionRow }) => row.month },
-    { colKey: 'rate', title: '实际结汇汇率', width: 100, align: 'center' as const, cell: ({ row }: { row: CommissionRow }) => row.rate ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>{Number(row.rate).toFixed(2)}</span> : '—' },
-    { colKey: 'person', title: '涉及人员', width: 90, cell: ({ row }: { row: CommissionRow }) => <span style={{ color: '#0052d9', fontWeight: 600 }}>{row.person}</span> },
-    { colKey: 'position', title: '岗位', width: 110, cell: ({ row }: { row: CommissionRow }) => <span style={{ background: '#e8f0ff', color: '#0052d9', border: '1px solid #cfe0ff', borderRadius: 4, padding: '1px 8px' }}>{row.position}</span> },
-    { colKey: 'amount', title: '提成金额（¥）', width: 130, align: 'right' as const, cell: ({ row }: { row: CommissionRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
-    { colKey: 'totalCommission', title: '合同总提成（¥）', width: 130, align: 'right' as const, cell: ({ row }: { row: CommissionRow }) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.totalCommission)}</span> },
+  // 第一级：按合同汇总（合同号 → 销售人员 + 笔数 + 涉及人数 + 提成总额）
+  const contractRows = useMemo(() => {
+    const map = new Map<
+      string,
+      { contractNo: string; customerName: string; templateName: string; plans: Set<number>; persons: Set<string>; amount: number }
+    >();
+    for (const r of filtered) {
+      const e =
+        map.get(r.contractNo) ?? {
+          contractNo: r.contractNo,
+          customerName: r.customerName,
+          templateName: r.templateName,
+          plans: new Set<number>(),
+          persons: new Set<string>(),
+          amount: 0,
+        };
+      e.plans.add(r.planIndex);
+      e.persons.add(r.person);
+      e.amount = Math.round((e.amount + r.amount) * 100) / 100;
+      map.set(r.contractNo, e);
+    }
+    return [...map.values()]
+      .map((e) => ({
+        contractNo: e.contractNo,
+        customerName: e.customerName,
+        templateName: e.templateName,
+        planCount: e.plans.size,
+        personCount: e.persons.size,
+        amount: e.amount,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [filtered]);
+
+  const contractColumns = [
+    { colKey: 'contractNo', title: '合同号', width: 140, cell: ({ row }: { row: ContractSummaryRow }) => <Link to={`/contract-statistics/${encodeURIComponent(row.contractNo)}`} style={{ color: '#0052d9', fontWeight: 600 }}>{row.contractNo || '—'}</Link> },
+    { colKey: 'customerName', title: '销售姓名', width: 90, cell: ({ row }: { row: ContractSummaryRow }) => row.customerName || '—' },
+    { colKey: 'templateName', title: '表格类型', width: 130, cell: ({ row }: { row: ContractSummaryRow }) => row.templateName || '—' },
+    { colKey: 'planCount', title: '笔数', width: 70, align: 'center' as const, cell: ({ row }: { row: ContractSummaryRow }) => row.planCount },
+    { colKey: 'personCount', title: '涉及人数', width: 90, align: 'center' as const, cell: ({ row }: { row: ContractSummaryRow }) => `${row.personCount} 人` },
+    { colKey: 'amount', title: '提成总额（¥）', width: 140, align: 'right' as const, cell: ({ row }: { row: ContractSummaryRow }) => <span style={{ color: '#0052d9', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.amount)}</span> },
   ];
 
   const monthColumns = [
@@ -308,7 +351,7 @@ export default function PaymentsPage() {
         />
       </div>
 
-      {/* 提成明细（按合同 × 笔 × 岗位 × 人）—— 单人筛选只显示该人 */}
+      {/* 提成明细（第一级：按合同汇总）—— 点合同号进入该合同统计页查看分人、分笔数明细 */}
       <div className="section-card">
         <div className="section-title">
           <span>
@@ -317,14 +360,14 @@ export default function PaymentsPage() {
             {position ? `（岗位：${position}）` : ''}
           </span>
           <span style={{ fontSize: 12, fontWeight: 400, color: '#9aa3b5' }}>
-            单人筛选只显示该人员提成，不混入其他人
+            按合同汇总；点击合同号查看该合同分人、分笔数的详细提成
           </span>
         </div>
         <Table
           className="table-responsive"
-          rowKey="id"
-          data={filtered}
-          columns={detailColumns}
+          rowKey="contractNo"
+          data={contractRows}
+          columns={contractColumns}
           bordered
           hover
           stripe
