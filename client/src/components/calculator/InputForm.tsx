@@ -84,6 +84,9 @@ export default function InputForm({
   const feesTotal = salesFees.reduce((s, f) => s + (f.amountCNY || 0), 0);
   const payCNY = payment ? (payment.currency === 'CNY' ? payment.amount : Math.round(payment.amount * payment.rate * 100) / 100) : 0;
 
+  // 计划内笔次：金额/比例取自收款计划并锁定，仅汇率可调；追加笔（超出计划）可自由填写
+  const planLocked = !!contractPlan[planIndex - 1];
+
   // 全部收款计划行（第 1 笔到最后一笔）：
   // 已收判定 = 该笔已保存 且 保存信息与合同计划一致（月份/币种/金额）；否则默认未收款
   const planRows = useMemo(
@@ -139,6 +142,12 @@ export default function InputForm({
     const payCNY = payment?.currency === 'CNY' ? Math.round(amt * 100) / 100 : Math.round(amt * r * 100) / 100;
     const ratio = cnyAmount > 0 ? Math.min(1, Math.round((payCNY / cnyAmount) * 10000) / 10000) : 0;
     updatePayment({ amount: amt, ratio, amountCNY: payCNY });
+  };
+  // 调整汇率：人民币 = 金额 × 新汇率（金额/比例取自收款计划，锁定不可改）
+  const updateRate = (r: number) => {
+    if (!(r > 0)) return;
+    const cny = payment?.currency === 'CNY' ? (payment?.amount ?? 0) : Math.round((payment?.amount ?? 0) * r * 100) / 100;
+    updatePayment({ rate: r, amountCNY: cny });
   };
 
   return (
@@ -339,6 +348,7 @@ export default function InputForm({
                   }
                 }}
                 placeholder="比例"
+                disabled={planLocked}
                 style={{ width: 84 }}
                 size="medium"
               />
@@ -373,6 +383,7 @@ export default function InputForm({
                 }}
                 placeholder="原币金额"
                 min={0}
+                disabled={planLocked}
                 style={{ width: 140 }}
                 theme="column"
               />
@@ -382,7 +393,7 @@ export default function InputForm({
                 <span style={{ fontSize: 13, color: '#6b7588', whiteSpace: 'nowrap' }}>×汇率</span>
                 <Input
                   value={String(payment.rate)}
-                  onChange={(v) => updatePayment({ rate: Number(v) > 0 ? Number(v) : payment.rate })}
+                  onChange={(v) => updateRate(Number(v))}
                   placeholder="汇率"
                   style={{ width: 80 }}
                   size="medium"

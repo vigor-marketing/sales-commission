@@ -281,7 +281,7 @@ calculateRouter.post('/', (req, res) => {
     return;
   }
 
-  // 一致性强校验：这笔收款必须与合同收款计划（对应笔次）完全一致（月份/币种/金额/汇率/比例）
+  // 一致性强校验：这笔收款必须与合同收款计划（对应笔次）一致（月份/币种/金额/比例；汇率可单独调整）
   const contractRow = db
     .prepare(`SELECT payment_plan_json FROM contracts WHERE contract_no = ?`)
     .get(contractNo) as { payment_plan_json: string } | undefined;
@@ -294,11 +294,10 @@ calculateRouter.post('/', (req, res) => {
         String(pay.month ?? '') === String(plan.month ?? '') &&
         String(pay.currency ?? '') === String(plan.currency ?? '') &&
         Math.abs(Number(pay.amount) - Number(plan.amount ?? 0)) < 0.01 &&
-        Math.abs(Number(pay.rate || 1) - Number(plan.rate || 1)) < 0.0001 &&
         Math.abs(Number(pay.ratio ?? 0) - Number(plan.ratio ?? 0)) < 0.0001;
       if (!same) {
         res.status(422).json({
-          error: `这笔收款必须与第 ${planIndex} 笔收款计划完全一致才能保存（计划：${plan.month} ${plan.currency} ${plan.amount} × 汇率 ${plan.rate}），当前录入与此不一致`,
+          error: `这笔收款必须与第 ${planIndex} 笔收款计划一致才能保存（计划：${plan.month} ${plan.currency} ${plan.amount}，比例 ${((plan.ratio ?? 0) * 100).toFixed(1)}%；汇率可单独调整）`,
         });
         return;
       }

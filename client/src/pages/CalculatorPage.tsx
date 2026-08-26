@@ -225,18 +225,17 @@ export default function CalculatorPage() {
       MessagePlugin.warning('请输入这笔收款比例（0%~100%）');
       return;
     }
-    // 保存强校验：这笔收款必须与当前笔收款计划完全一致（月份/币种/金额/汇率/比例）
+    // 保存强校验：这笔收款必须与当前笔收款计划一致（月份/币种/金额/比例；汇率可单独调整）
     const plan = contractPlan[planIndex - 1];
     if (plan) {
       const same =
         payment.month === plan.month &&
         payment.currency === plan.currency &&
         Math.abs((payment.amount ?? 0) - (plan.amount ?? 0)) < 0.01 &&
-        Math.abs((payment.rate ?? 0) - (plan.rate ?? 1)) < 0.0001 &&
         Math.abs((payment.ratio ?? 0) - (plan.ratio ?? 0)) < 0.0001;
       if (!same) {
         MessagePlugin.warning(
-          `这笔收款必须与第 ${planIndex} 笔收款计划完全一致才能保存（计划：${plan.month} ${plan.currency} ${plan.amount}，当前录入与此不一致）`
+          `这笔收款必须与第 ${planIndex} 笔收款计划一致才能保存（计划：${plan.month} ${plan.currency} ${plan.amount}，比例 ${((plan.ratio ?? 0) * 100).toFixed(1)}%；汇率可单独调整）`
         );
         return;
       }
