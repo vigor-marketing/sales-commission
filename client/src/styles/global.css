@@ -555,6 +555,49 @@ h4 {
   white-space: nowrap;
 }
 
+/* ============================================================ 人员按月汇总展开：树形引导线 */
+.pm-detail__contract {
+  position: relative;
+  padding-left: 20px;
+}
+/* 合同左侧竖线 */
+.pm-detail__contract::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--border-strong);
+}
+/* 合同头部横线（连到竖线） */
+.pm-detail__contract-head {
+  position: relative;
+}
+.pm-detail__contract-head::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: var(--border-strong);
+}
+/* 月份行：横线连到合同竖线 */
+.pm-detail__month {
+  position: relative;
+  padding-left: 20px;
+}
+.pm-detail__month::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: var(--border-strong);
+}
+
 /* ============================================================ 编辑表格（设置页） */
 .settings-table th {
   background: var(--bg-muted);

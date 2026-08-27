@@ -555,14 +555,14 @@ export default function PaymentsPage() {
                       {months.map(([month, items]) => {
                         const mTotal = Math.round(items.reduce((s, it) => s + it.amount, 0) * 100) / 100;
                         return (
-                          <div key={month} style={{ paddingLeft: 16, marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, color: '#4a5568', marginBottom: 3 }}>
+                          <div key={month} className="pm-detail__month" style={{ marginBottom: 8 }}>
+                            <div className="pm-detail__contract-head">
                               <span>{month}</span>
-                              <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>
+                              <span className="pm-detail__subtotal" style={{ color: '#0052d9' }}>
                                 小计 ¥{fmtMoney(mTotal)}
                               </span>
                             </div>
-                            <div className="pm-detail__chips" style={{ paddingLeft: 16 }}>
+                            <div className="pm-detail__chips">
                               {items.map((it, i) => (
                                 <span key={i} className="pm-detail__chip">
                                   {it.position} ¥{fmtMoney(it.amount)}
