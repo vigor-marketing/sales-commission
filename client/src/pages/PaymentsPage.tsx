@@ -359,17 +359,17 @@ export default function PaymentsPage() {
     { colKey: 'yearAmount', title: '当年（¥）', width: 110, align: 'right' as const, cell: ({ row }: { row: PersonRow }) => <span style={{ color: '#00a870', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(row.yearAmount)}</span> },
   ];
 
-  // 人员 → 月份 → 合同 → 岗位金额，供展开行展示
-  const personDetail = useMemo(() => {
+  // 人员 → 合同 → 月份 → 岗位金额，供展开行展示（同一合同不同月份合并到一个合同下）
+  const personContractDetail = useMemo(() => {
     const map = new Map<string, Map<string, Map<string, Array<{ position: string; amount: number }>>>>();
     for (const r of filtered) {
-      const byMonth = map.get(r.person) ?? new Map<string, Map<string, Array<{ position: string; amount: number }>>>();
-      const byContract = byMonth.get(r.month) ?? new Map<string, Array<{ position: string; amount: number }>>();
-      const arr = byContract.get(r.contractNo) ?? [];
+      const byContract = map.get(r.person) ?? new Map<string, Map<string, Array<{ position: string; amount: number }>>>();
+      const byMonth = byContract.get(r.contractNo) ?? new Map<string, Array<{ position: string; amount: number }>>();
+      const arr = byMonth.get(r.month) ?? [];
       arr.push({ position: r.position, amount: r.amount });
-      byContract.set(r.contractNo, arr);
-      byMonth.set(r.month, byContract);
-      map.set(r.person, byMonth);
+      byMonth.set(r.month, arr);
+      byContract.set(r.contractNo, byMonth);
+      map.set(r.person, byContract);
     }
     return map;
   }, [filtered]);
@@ -536,45 +536,46 @@ export default function PaymentsPage() {
           expandedRowKeys={expandedKeys}
           onExpandChange={(keys) => setExpandedKeys(keys as Array<string | number>)}
           expandedRow={({ row }: { row: PersonRow }) => {
-            const byMonth =
-              personDetail.get(row.person) ??
+            const byContract =
+              personContractDetail.get(row.person) ??
               new Map<string, Map<string, Array<{ position: string; amount: number }>>>();
-            const months = [...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+            const contracts = [...byContract.entries()].sort((a, b) => a[0].localeCompare(b[0]));
             return (
               <div className="pm-detail">
-                {months.map(([month, byContract]) => (
-                  <div key={month} className="pm-detail__contract">
-                    <div className="pm-detail__contract-head">
-                      <span style={{ color: '#4a5568' }}>{month}</span>
-                      <span className="pm-detail__subtotal">
-                        {row.monthItems.find((m) => m.month === month)?.amount !== undefined
-                          ? `¥ ${fmtMoney(row.monthItems.find((m) => m.month === month)?.amount ?? 0)}`
-                          : ''}
-                      </span>
-                    </div>
-                    {[...byContract.entries()].map(([no, items]) => {
-                      const cTotal = Math.round(items.reduce((s, it) => s + it.amount, 0) * 100) / 100;
-                      return (
-                        <div key={no} style={{ paddingLeft: 14, marginBottom: 6 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, color: '#4a5568', marginBottom: 3 }}>
-                            <Link to={`/contract-statistics/${encodeURIComponent(no)}?from=payments`}>{no}</Link>
-                            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#00a870', fontVariantNumeric: 'tabular-nums' }}>
-                              小计 ¥{fmtMoney(cTotal)}
-                            </span>
-                          </div>
-                          <div className="pm-detail__chips" style={{ paddingLeft: 16 }}>
-                            {items.map((it, i) => (
-                              <span key={i} className="pm-detail__chip">
-                                {it.position} ¥{fmtMoney(it.amount)}
+                {contracts.map(([no, byMonth]) => {
+                  const months = [...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+                  const cTotal =
+                    Math.round(months.reduce((s, [, items]) => s + items.reduce((x, it) => x + it.amount, 0), 0) * 100) / 100;
+                  return (
+                    <div key={no} className="pm-detail__contract">
+                      <div className="pm-detail__contract-head">
+                        <Link to={`/contract-statistics/${encodeURIComponent(no)}?from=payments`}>{no}</Link>
+                        <span className="pm-detail__subtotal">合同小计 ¥{fmtMoney(cTotal)}</span>
+                      </div>
+                      {months.map(([month, items]) => {
+                        const mTotal = Math.round(items.reduce((s, it) => s + it.amount, 0) * 100) / 100;
+                        return (
+                          <div key={month} style={{ paddingLeft: 16, marginBottom: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, color: '#4a5568', marginBottom: 3 }}>
+                              <span>{month}</span>
+                              <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#0052d9', fontVariantNumeric: 'tabular-nums' }}>
+                                小计 ¥{fmtMoney(mTotal)}
                               </span>
-                            ))}
+                            </div>
+                            <div className="pm-detail__chips" style={{ paddingLeft: 16 }}>
+                              {items.map((it, i) => (
+                                <span key={i} className="pm-detail__chip">
+                                  {it.position} ¥{fmtMoney(it.amount)}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-                {months.length === 0 && <span style={{ color: '#9aa3b5', fontSize: 12 }}>无明细</span>}
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {contracts.length === 0 && <span style={{ color: '#9aa3b5', fontSize: 12 }}>无明细</span>}
               </div>
             );
           }}
